@@ -1,0 +1,9 @@
+{
+	"name": "Trainworks",
+	"version": "0.0.1",
+	"title": "Trainworks",
+	"author": "Rhamphoryncus (Adam Olsen)",
+	"factorio_version": "0.18",	
+	"dependencies": ["base >= 0.18.0"],
+	"description": "Trains using a requester/provider system."
+}
