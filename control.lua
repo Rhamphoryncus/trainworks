@@ -1,4 +1,9 @@
 -- Todo:
+-- Unravel service_requests() into persistent state
+-- Restructure to have a unified state that incorporates the items, the request amounts, and outstanding actions, then derive provides and requests from that
+-- Because each chest will only have a few of the many item types comparing the old state with new state will indicate what provides/requests to remove before adding the new ones
+-- register_chest(), deregister_chest(), update_chest()
+-- maybe also a refresh_state() that deletes the globals and rescans everything
 
 
 function fstr(o)
@@ -36,11 +41,12 @@ script.on_init(function()
     global.depot = nil
     global.stopchests = {}  -- The chests belonging to each stop
     global.combinators = {}  -- Combinators containing request amounts for each chest
-    global.actions = {}  -- Trains in progress
+    global.train_actions = {}  -- Trains in progress
+    global.chest_actions = {}  -- Actions pending for each chest
 end)
 
 
-function dispatch_train(source, dest, itemname, amount)
+function dispatch_train(source, dest, actions)
     local train = global.train
     if train == nil or not train.valid or train.state ~= defines.train_state.wait_station or train.station == nil or train.station.backer_name ~= "Depot" then
         -- No trains available
@@ -58,7 +64,7 @@ function dispatch_train(source, dest, itemname, amount)
     }
     train.schedule = x
 
-    global.actions[train.id] = {src=source, dest=dest, itemname=itemname, amount=amount}
+    global.train_actions[train.id] = {src=source, dest=dest, actions=actions}
     log("Dispatched train " .. fstr(train.id) .. " from " .. source.backer_name .. " to " .. dest.backer_name)
 end
 
@@ -72,23 +78,25 @@ function reset_train(train)
     train.schedule = x
 end
 
-function transfer_inventories(src, dest, action)
-    local removed = src.remove({name=action.itemname, count=action.amount})
-    local inserted = dest.insert({name=action.itemname, count=removed})
-    local bounce = removed - inserted
-    if bounce > 0 then
-        log("Bounce: " .. fstr(bounce))
-        local bounced = src.insert({name=action.itemname, count=bounce})
-        if bounce ~= bounced then
-            -- XXX print an error to console.  This might happen if a user applies filters or a bar to a chest/wagon
-            log("Unable to bounce, items deleted!")
+function transfer_inventories(src, dest, actions)
+    for itemname, amount in pairs(actions) do
+        local removed = src.remove({name=itemname, count=amount})
+        local inserted = dest.insert({name=itemname, count=removed})
+        local bounce = removed - inserted
+        if bounce > 0 then
+            log("Bounce: " .. fstr(bounce))
+            local bounced = src.insert({name=itemname, count=bounce})
+            if bounce ~= bounced then
+                -- XXX print an error to console.  This might happen if a user applies filters or a bar to a chest/wagon
+                log("Unable to bounce, items deleted!")
+            end
         end
     end
 end
 
 function action_train(train)
     -- Load/unload the train as it arrives at a station
-    local action = global.actions[train.id]
+    local action = global.train_actions[train.id]
     log("Carriages: " .. fstr(train.carriages))
     log("Schedule index: " .. fstr(train.schedule.current))
 
@@ -99,7 +107,7 @@ function action_train(train)
         log("Blah: " .. fstr(global.stopchests) .. " ... " .. fstr(action))
         local c_inv = chest.get_inventory(defines.inventory.chest)
         local w_inv = train.carriages[2].get_inventory(defines.inventory.cargo_wagon)
-        transfer_inventories(c_inv, w_inv, action)
+        transfer_inventories(c_inv, w_inv, action.actions[1])
     elseif train.schedule.current == 2 then
         -- Unload
         local chest = global.stopchests[action.dest][1]
@@ -107,7 +115,7 @@ function action_train(train)
         log("Blah: " .. fstr(global.stopchests) .. " ... " .. fstr(action))
         local c_inv = chest.get_inventory(defines.inventory.chest)
         local w_inv = train.carriages[2].get_inventory(defines.inventory.cargo_wagon)
-        transfer_inventories(w_inv, c_inv, action)
+        transfer_inventories(w_inv, c_inv, action.actions[1])
     end
 end
 
@@ -310,8 +318,9 @@ function service_requests()
         if prov ~= nil then
             prov = prov[1]  -- XXX FIXME giant bodge
             log("Min: " .. fstr(req) .. ", " .. fstr(prov))
-            local amount = math.min(req.amount, prov.amount)
-            dispatch_train(prov.stop, req.stop, name, amount)
+            local actions = {{}}
+            actions[1][name] = math.min(req.amount, prov.amount)
+            dispatch_train(prov.stop, req.stop, actions)
         end
     end
 end
