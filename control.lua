@@ -210,10 +210,7 @@ end
 
 
 function register_chest(chest)
-    -- check chest orientation, which may depend on having all the overlap stuff.  Maybe assume east-west for now.
-    -- search for left and right spots.  Add links.
-    -- if left or right has a stop (but not both!) tell them to update
-    -- XXX FIXME thous will be better if this just scanned left/right to find a stop, then told the stop to update everything.
+    -- XXX FIXME check chest orientation, which may depend on having all the overlap stuff.  Assuming east-west for now.
     log("Feh " .. fstr(chest) .. " & " .. fstr(chest.position))
     local leftpos = {chest.position.x - 7, chest.position.y}
     local rightpos = {chest.position.x + 7, chest.position.y}
