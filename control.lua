@@ -1,9 +1,4 @@
 -- Todo:
--- Create temporary stops, to potentially handle multiple identically named stops
--- Start adding item awareness at stops
--- Each stop (provider or requester) should have a list of associated chests and a list of actions (trains coming for requests)
--- Each train should have a reference to the provider and requester stops and have a list of wagons/chests with the set of transfers for each
--- When building a station or a chest I need to detect proximity and link them together
 
 
 function fstr(o)
@@ -39,7 +34,6 @@ end
 script.on_init(function()
     global.train = nil
     global.depot = nil
-    global.cheststops = {}  -- The stop belonging to each chest
     global.stopchests = {}  -- The chests belonging to each stop
     global.combinators = {}  -- Combinators containing request amounts for each chest
     global.actions = {}  -- Trains in progress
@@ -137,9 +131,11 @@ function update_stop(stop)
 
     local chestlist = {}
 
+    -- XXX FIXME use search_for_stop() to make sure there isn't already a stop
+
     while true do
         if stop.direction == defines.direction.north then
-            -- North facing trainstop means the first wagon is a bit south of it
+            -- North facing stop means we go south each step to find the chests/wagons
             pos.y = pos.y - 7
         elseif stop.direction == defines.direction.south then
             pos.y = pos.y + 7
@@ -152,18 +148,11 @@ function update_stop(stop)
         local chests = stop.surface.find_entities_filtered{type="container", position=pos}
         local chest = chests[1] -- XXX ugly
 
-        log("Blah " .. serpent.line(stop) .. " -> " .. serpent.line(chests) .. " (" .. serpent.line(chest) .. ") at position " .. serpent.line(pos))
+        log("Warg " .. fstr(stop) .. " (" .. fstr(stop.position) .. ") -> " .. fstr(chests) .. " (" .. fstr(pos) .. ")")
         if chest == nil then
             break
         end
 
-        if global.cheststops[chest] ~= nil and global.cheststops[chest] ~= stop then
-            -- Just placed a stop when a different stop already owns these chests.  This should only be possible for the first chest in the loop
-            -- XXX return some sort of error, unbuild the stop
-            return
-        end
-
-        global.cheststops[chest] = stop
         table.insert(chestlist, chest)
         log("Inserted 1 " .. serpent.line(chest) .. " into " .. serpent.line(chestlist) .. " of size " .. serpent.line(#chestlist))
     end
@@ -178,39 +167,77 @@ function update_stop(stop)
 end
 
 
+function search_for_stop(surface, pos, direction)
+    pos = {x=pos.x, y=pos.y}  -- Clone pos so we don't modify the passed-in table
+
+    while true do
+        -- XXX check for stop first
+        local stoppos = {x=pos.x, y=pos.y}
+        if direction == defines.direction.north then
+            stoppos.y = pos.y + 3
+        elseif direction == defines.direction.south then
+            stoppos.y = pos.y - 3
+        elseif direction == defines.direction.east then
+            stoppos.x = pos.x + 3
+        elseif direction == defines.direction.west then
+            stoppos.x = pos.x - 3
+        end
+        local stops = surface.find_entities_filtered{type="train-stop", position=stoppos}
+        local stop = stops[1]  -- XXX ugly hack
+--        log("Searched at " .. fstr(stoppos) .. " and " .. fstr(pos) .. " -> " .. fstr(stops) .. ", " .. fstr(stop))
+        if stop ~= nil then
+            return stop
+        end
+
+        local chests = surface.find_entities_filtered{type="container", position=pos}
+        local chest = chests[1]  -- XXX ugly hack
+        if chest == nil then
+            return nil  -- No stop found
+        end
+
+        if direction == defines.direction.north then
+            -- Following the orientation of the stop.  North-facing stop means we go north each step to reach it
+            pos.y = pos.y + 7
+        elseif direction == defines.direction.south then
+            pos.y = pos.y - 7
+        elseif direction == defines.direction.east then
+            pos.x = pos.x + 7
+        elseif direction == defines.direction.west then
+            pos.x = pos.x - 7
+        end
+    end
+end
+
+
 function register_chest(chest)
     -- check chest orientation, which may depend on having all the overlap stuff.  Maybe assume east-west for now.
     -- search for left and right spots.  Add links.
     -- if left or right has a stop (but not both!) tell them to update
     -- XXX FIXME thous will be better if this just scanned left/right to find a stop, then told the stop to update everything.
-    log("Feh " .. serpent.line(chest) .. " & " .. serpent.line(chest.position))
+    log("Feh " .. fstr(chest) .. " & " .. fstr(chest.position))
     local leftpos = {chest.position.x - 7, chest.position.y}
     local rightpos = {chest.position.x + 7, chest.position.y}
     local left = chest.surface.find_entities_filtered{type="container", position=leftpos}
     local right = chest.surface.find_entities_filtered{type="container", position=rightpos}
-
-    if left ~= nil and right ~= nil and global.cheststops[left] ~= nil and global.cheststops[right] ~= nil then
-        -- XXX return an error.  Stops aren't allowed to overlap and use the same set of chests.
-        log("Error, would merge chest strings")
-        return
-    end
-
-    local stop = nil
-    if left ~= nil and global.cheststops[left] ~= nil then
-        stop = global.cheststops[left]
-    elseif right ~= nil and global.cheststops[right] ~= nil then
-        stop = global.cheststops[right]
-    end
-    global.cheststops[chest] = stop
 
     -- XXX create a combinator
     local combi = chest.surface.create_entity{name="constant-combinator", position=chest.position, force=chest.force}
     global.combinators[chest.unit_number] = combi
     log("Test2: " .. fstr(global.combinators) .. "[" .. fstr(chest) .. "] -> " .. fstr(global.combinators[chest.unit_number]))
 
-    -- XXX FIXME does not handle if a chest was just placed adjacent to a stop, starting the chain
-    if stop ~= nil then
-        update_stop(stop)
+    local stop1 = search_for_stop(chest.surface, chest.position, defines.direction.east)
+    local stop2 = search_for_stop(chest.surface, chest.position, defines.direction.west)
+    log("searched: " .. fstr(stop1) .. ", " .. fstr(stop2))
+    if stop1 ~= nil and stop2 ~= nil then
+        -- XXX return an error.  Stops aren't allowed to overlap and use the same set of chests.
+        log("Error, would merge chest strings")
+        return
+    end
+
+    if stop1 ~= nil then
+        update_stop(stop1)
+    elseif stop2 ~= nil then
+        update_stop(stop2)
     end
 end
 
