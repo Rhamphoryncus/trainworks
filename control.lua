@@ -42,7 +42,7 @@ script.on_init(function()
     global.stopchests = {}  -- The chests belonging to each stop
     global.combinators = {}  -- Combinators containing request amounts for each chest
     global.train_actions = {}  -- Trains in progress
-    global.chest_actions = {}  -- Actions pending for each chest
+    global.stop_actions = {}  -- Actions pending for the chests of each stop
 end)
 
 
@@ -65,6 +65,8 @@ function dispatch_train(source, dest, actions)
     train.schedule = x
 
     global.train_actions[train.id] = {src=source, dest=dest, actions=actions}
+    global.stop_actions[source.unit_number] = {actions=actions, load=true}
+    global.stop_actions[dest.unit_number] = {actions=actions, load=false}
     log("Dispatched train " .. fstr(train.id) .. " from " .. source.backer_name .. " to " .. dest.backer_name)
 end
 
@@ -102,20 +104,25 @@ function action_train(train)
 
     if train.schedule.current == 1 then
         -- Load
-        local chest = global.stopchests[action.src][1]
+        local chest = global.stopchests[action.src.unit_number].chests[1]
         log("Chest: " .. fstr(chest))
         log("Blah: " .. fstr(global.stopchests) .. " ... " .. fstr(action))
         local c_inv = chest.get_inventory(defines.inventory.chest)
         local w_inv = train.carriages[2].get_inventory(defines.inventory.cargo_wagon)
         transfer_inventories(c_inv, w_inv, action.actions[1])
+
+        global.stop_actions[action.src.unit_number] = nil  -- Delete the load request
     elseif train.schedule.current == 2 then
         -- Unload
-        local chest = global.stopchests[action.dest][1]
+        local chest = global.stopchests[action.dest.unit_number].chests[1]
         log("Chest: " .. fstr(chest))
         log("Blah: " .. fstr(global.stopchests) .. " ... " .. fstr(action))
         local c_inv = chest.get_inventory(defines.inventory.chest)
         local w_inv = train.carriages[2].get_inventory(defines.inventory.cargo_wagon)
         transfer_inventories(w_inv, c_inv, action.actions[1])
+
+        global.stop_actions[action.dest.unit_number] = nil  -- Delete the unload request
+        global.train_actions[train.id] = nil
     end
 end
 
@@ -165,9 +172,10 @@ function update_stop(stop)
         log("Inserted 1 " .. serpent.line(chest) .. " into " .. serpent.line(chestlist) .. " of size " .. serpent.line(#chestlist))
     end
 
-    global.stopchests[stop] = chestlist
+    -- XXX FIXME can't use stop as key, has to be stop.unit_number
+    global.stopchests[stop.unit_number] = {stop=stop, chests=chestlist}
 --    log("b2 " .. serpent.block(global.stopchests) .. " % " .. serpent.line(#global.stopchests))
---    log("ARGH " .. serpent.line(global.stopchests[stop]))
+--    log("ARGH " .. serpent.line(global.stopchests[stop.unit_number]))
 
 --    local foo = {}
 --    foo[stop] = "baz"
@@ -271,15 +279,25 @@ function service_requests()
 
     local requested = {}  -- itemname -> list of requested items
     local provided = {}  -- itemname -> list of provided items
-    for stop, chests in pairs(global.stopchests) do
+    for w, x in pairs(global.stopchests) do
+        local stop = x.stop
+        local chests = x.chests
+        log("Stop:" .. fstr(stop))
+        -- local action = global.stop_actions[stop.unit_number]
         for i, chest in pairs(chests) do
             local combi = global.combinators[chest.unit_number]
             local signals = merge_combinator_signals(combi)
             local inv = chest.get_inventory(defines.inventory.chest).get_contents()
+            local values = {}  -- itemname -> {have, want, coming}
 --            log("inv: " .. fstr(inv))
 
             -- XXX FIXME does not account for actions (pending trains)
             for name, amount in pairs(inv) do
+                if values[name] == nil then
+                    values[name] = {have=0, want=0, coming=0}
+                end
+                values[name].have = values[name].have + amount
+
                 if signals[name] then
                     local diff = amount - signals[name].count
                     if diff > 0 then
@@ -297,6 +315,11 @@ function service_requests()
             end
 
             for name, sig in pairs(signals) do
+                if values[name] == nil then
+                    values[name] = {have=0, want=0, coming=0}
+                end
+                values[name].want = values[name].want + sig.count
+
                 local diff = sig.count - (inv[name] or 0)
                 if diff > 0 then
                     if not requested[name] then
@@ -305,6 +328,8 @@ function service_requests()
                     table.insert(requested[name], {stop=stop, chest=chest, amount=diff})
                 end
             end
+
+            log("values: " .. fstr(values))
         end
     end
 
