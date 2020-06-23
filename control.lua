@@ -127,7 +127,7 @@ function action_train(train)
 end
 
 
-function update_stop(stop)
+function find_stop_chests(stop)
     -- loop through the chest and each chest's neighbour, making sure they're aligned on the tracks (later) and have no stop registered yet
     -- if they have a stop abort the register, make the item drop or something instead.
     -- XXX better to check the stop orientation and detect chests exactly where they should be?
@@ -248,9 +248,9 @@ function register_chest(chest)
     end
 
     if stop1 ~= nil then
-        update_stop(stop1)
+        find_stop_chests(stop1)
     elseif stop2 ~= nil then
-        update_stop(stop2)
+        find_stop_chests(stop2)
     end
 end
 
@@ -279,6 +279,11 @@ function service_requests()
 
     local requested = {}  -- itemname -> list of requested items
     local provided = {}  -- itemname -> list of provided items
+    local values = {}  -- chestindex -> itemname -> stopnum -> {have, want, coming}
+    local requested2 = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
+    local provided2 = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
+
+    -- Calculate values
     for w, x in pairs(global.stopchests) do
         local stop = x.stop
         local chests = x.chests
@@ -288,53 +293,93 @@ function service_requests()
             local combi = global.combinators[chest.unit_number]
             local signals = merge_combinator_signals(combi)
             local inv = chest.get_inventory(defines.inventory.chest).get_contents()
-            local values = {}  -- itemname -> {have, want, coming}
+--            local values = {}  -- itemname -> {have, want, reqcoming, provcoming}
 --            log("inv: " .. fstr(inv))
 
             -- XXX FIXME does not account for actions (pending trains)
             for name, amount in pairs(inv) do
-                if values[name] == nil then
-                    values[name] = {have=0, want=0, coming=0}
+                -- New value-based method
+                if values[i] == nil then
+                    values[i] = {}
                 end
-                values[name].have = values[name].have + amount
+                if values[i][name] == nil then
+                    values[i][name] = {}
+                end
+                if values[i][name][stop.unit_number] == nil then
+                    values[i][name][stop.unit_number] = {have=0, want=0, reqcoming=0, provcoming=0}
+                end
+                values[i][name][stop.unit_number].have = values[i][name][stop.unit_number].have + amount
 
+                -- Old method
                 if signals[name] then
                     local diff = amount - signals[name].count
                     if diff > 0 then
                         if not provided[name] then
                             provided[name] = {}
                         end
-                        table.insert(provided[name], {stop=stop, chest=chest, amount=diff})
+                        table.insert(provided[name], {stopnum=stop.unit_number, chest=chest, amount=diff})
                     end
                 else
                     if not provided[name] then
                         provided[name] = {}
                     end
-                    table.insert(provided[name], {stop=stop, chest=chest, amount=amount})
+                    table.insert(provided[name], {stopnum=stop.unit_number, chest=chest, amount=amount})
                 end
             end
 
             for name, sig in pairs(signals) do
-                if values[name] == nil then
-                    values[name] = {have=0, want=0, coming=0}
+                -- New value-based method
+                if values[i] == nil then
+                    values[i] = {}
                 end
-                values[name].want = values[name].want + sig.count
+                if values[i][name] == nil then
+                    values[i][name] = {}
+                end
+                if values[i][name][stop.unit_number] == nil then
+                    values[i][name][stop.unit_number] = {have=0, want=0, reqcoming=0, provcoming=0}
+                end
+                values[i][name][stop.unit_number].want = values[i][name][stop.unit_number].want + sig.count
 
+                -- Old method
                 local diff = sig.count - (inv[name] or 0)
                 if diff > 0 then
                     if not requested[name] then
                         requested[name] = {}
                     end
-                    table.insert(requested[name], {stop=stop, chest=chest, amount=diff})
+                    table.insert(requested[name], {stopnum=stop.unit_number, chest=chest, amount=diff})
                 end
             end
-
-            log("values: " .. fstr(values))
         end
     end
 
     log("Requests: " .. fstr(requested))
     log("Provided: " .. fstr(provided))
+    log("Values: " .. fstr(values))
+    -- Process values into requests/provided
+    for chestindex, x in pairs(values) do
+        for itemname, y in pairs(x) do
+            for stopnum, z in pairs(y) do
+                local excess = z.have - z.want - z.reqcoming
+                local shortage = z.want - z.have - z.provcoming
+
+                if excess > 0 then
+                    if provided2[chestindex] == nil then
+                        provided2[chestindex] = {}
+                    end
+                    provided2[chestindex][itemname] = {stop=stopnum, amount=excess}
+                end
+
+                if shortage > 0 then
+                    if requested2[chestindex] == nil then
+                        requested2[chestindex] = {}
+                    end
+                    requested2[chestindex][itemname] = {stop=stopnum, amount=shortage}
+                end
+            end
+        end
+    end
+    log("Requested2:" .. fstr(requested2))
+    log("Provided2:" .. fstr(provided2))
 
     -- loop through requests and see if something is in provided
     for name, req in pairs(requested) do
@@ -345,7 +390,7 @@ function service_requests()
             log("Min: " .. fstr(req) .. ", " .. fstr(prov))
             local actions = {{}}
             actions[1][name] = math.min(req.amount, prov.amount)
-            dispatch_train(prov.stop, req.stop, actions)
+            dispatch_train(global.stopchests[prov.stopnum].stop, global.stopchests[req.stopnum].stop, actions)
         end
     end
 end
@@ -367,7 +412,7 @@ script.on_event({defines.events.on_built_entity},
             global.depot = e.created_entity
             global.depot.backer_name = "Depot"
         elseif e.created_entity.name == "tw_stop" then
-            update_stop(e.created_entity)
+            find_stop_chests(e.created_entity)
         elseif e.created_entity.name == "locomotive" then
 --            -- XXX modifying a train invalidates the old entity
 --            global.train = e.created_entity.train
