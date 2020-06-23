@@ -277,28 +277,24 @@ function service_requests()
     -- compare chest contents with combinator, figure out who wants items and who has items
     -- for each item type take the requests and create an action from the provider
 
-    local requested = {}  -- itemname -> list of requested items
-    local provided = {}  -- itemname -> list of provided items
     local values = {}  -- chestindex -> itemname -> stopnum -> {have, want, coming}
-    local requested2 = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
-    local provided2 = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
+    local requested = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
+    local provided = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
 
     -- Calculate values
     for w, x in pairs(global.stopchests) do
         local stop = x.stop
         local chests = x.chests
         log("Stop:" .. fstr(stop))
-        -- local action = global.stop_actions[stop.unit_number]
+
         for i, chest in pairs(chests) do
             local combi = global.combinators[chest.unit_number]
             local signals = merge_combinator_signals(combi)
             local inv = chest.get_inventory(defines.inventory.chest).get_contents()
---            local values = {}  -- itemname -> {have, want, reqcoming, provcoming}
---            log("inv: " .. fstr(inv))
 
             -- XXX FIXME does not account for actions (pending trains)
+            -- Add inventory to values
             for name, amount in pairs(inv) do
-                -- New value-based method
                 if values[i] == nil then
                     values[i] = {}
                 end
@@ -309,26 +305,10 @@ function service_requests()
                     values[i][name][stop.unit_number] = {have=0, want=0, reqcoming=0, provcoming=0}
                 end
                 values[i][name][stop.unit_number].have = values[i][name][stop.unit_number].have + amount
-
-                -- Old method
-                if signals[name] then
-                    local diff = amount - signals[name].count
-                    if diff > 0 then
-                        if not provided[name] then
-                            provided[name] = {}
-                        end
-                        table.insert(provided[name], {stopnum=stop.unit_number, chest=chest, amount=diff})
-                    end
-                else
-                    if not provided[name] then
-                        provided[name] = {}
-                    end
-                    table.insert(provided[name], {stopnum=stop.unit_number, chest=chest, amount=amount})
-                end
             end
 
+            -- Add signals to values
             for name, sig in pairs(signals) do
-                -- New value-based method
                 if values[i] == nil then
                     values[i] = {}
                 end
@@ -339,21 +319,10 @@ function service_requests()
                     values[i][name][stop.unit_number] = {have=0, want=0, reqcoming=0, provcoming=0}
                 end
                 values[i][name][stop.unit_number].want = values[i][name][stop.unit_number].want + sig.count
-
-                -- Old method
-                local diff = sig.count - (inv[name] or 0)
-                if diff > 0 then
-                    if not requested[name] then
-                        requested[name] = {}
-                    end
-                    table.insert(requested[name], {stopnum=stop.unit_number, chest=chest, amount=diff})
-                end
             end
         end
     end
 
-    log("Requests: " .. fstr(requested))
-    log("Provided: " .. fstr(provided))
     log("Values: " .. fstr(values))
     -- Process values into requests/provided
     for chestindex, x in pairs(values) do
@@ -363,34 +332,46 @@ function service_requests()
                 local shortage = z.want - z.have - z.provcoming
 
                 if excess > 0 then
-                    if provided2[chestindex] == nil then
-                        provided2[chestindex] = {}
+                    if provided[chestindex] == nil then
+                        provided[chestindex] = {}
                     end
-                    provided2[chestindex][itemname] = {stop=stopnum, amount=excess}
+                    if provided[chestindex][itemname] == nil then
+                        provided[chestindex][itemname] = {}
+                    end
+                    provided[chestindex][itemname][stopnum] = excess
                 end
 
                 if shortage > 0 then
-                    if requested2[chestindex] == nil then
-                        requested2[chestindex] = {}
+                    if requested[chestindex] == nil then
+                        requested[chestindex] = {}
                     end
-                    requested2[chestindex][itemname] = {stop=stopnum, amount=shortage}
+                    if requested[chestindex][itemname] == nil then
+                        requested[chestindex][itemname] = {}
+                    end
+                    requested[chestindex][itemname][stopnum] = shortage
                 end
             end
         end
     end
-    log("Requested2:" .. fstr(requested2))
-    log("Provided2:" .. fstr(provided2))
+    log("Requested: " .. fstr(requested))
+    log("Provided: " .. fstr(provided))
 
-    -- loop through requests and see if something is in provided
-    for name, req in pairs(requested) do
-        local prov = provided[name]
-        req = req[1]  -- XXX FIXME giant bodge
-        if prov ~= nil then
-            prov = prov[1]  -- XXX FIXME giant bodge
-            log("Min: " .. fstr(req) .. ", " .. fstr(prov))
-            local actions = {{}}
-            actions[1][name] = math.min(req.amount, prov.amount)
-            dispatch_train(global.stopchests[prov.stopnum].stop, global.stopchests[req.stopnum].stop, actions)
+    -- Loop through requests and see if something is in provided
+    for chestindex, x in pairs(requested) do
+        for itemname, stops in pairs(x) do
+            for stopnum, amount in pairs(stops) do
+                if provided[chestindex] ~= nil then
+                    local pstops = provided[chestindex][itemname]
+                    if pstops ~= nil then
+                        for pstopnum, pamount in pairs(pstops) do
+                            local actions = {{}}
+                            actions[chestindex][itemname] = math.min(amount, pamount)
+                            log("Min2: " .. fstr(actions))
+                            dispatch_train(global.stopchests[pstopnum].stop, global.stopchests[stopnum].stop, actions)
+                        end
+                    end
+                end
+            end
         end
     end
 end
