@@ -358,9 +358,6 @@ function service_requests()
     end
 
     log("Values: " .. fstr(values))
-    -- Process values into requests/provided
-    for stopnum, value in pairs(values) do
-    end
     log("Requested: " .. fstr(requested))
     log("Provided: " .. fstr(provided))
 
