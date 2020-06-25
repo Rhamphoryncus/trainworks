@@ -272,86 +272,94 @@ function merge_combinator_signals(combi)
 end
 
 
+function calculate_value_for_stop(stopnum)
+    local value = {}
+    local chests = global.stopchests[stopnum].chests
+
+    for i, chest in pairs(chests) do
+        local combi = global.combinators[chest.unit_number]
+        local signals = merge_combinator_signals(combi)
+        local inv = chest.get_inventory(defines.inventory.chest).get_contents()
+
+        -- XXX FIXME does not account for actions (pending trains)
+        -- Add inventory to values
+        for name, amount in pairs(inv) do
+            if value[i] == nil then
+                value[i] = {}
+            end
+            if value[i][name] == nil then
+                value[i][name] = {have=0, want=0, reqcoming=0, provcoming=0}
+            end
+            value[i][name].have = value[i][name].have + amount
+        end
+
+        -- Add signals to values
+        for name, sig in pairs(signals) do
+            if value[i] == nil then
+                value[i] = {}
+            end
+            if value[i][name] == nil then
+                value[i][name] = {have=0, want=0, reqcoming=0, provcoming=0}
+            end
+            value[i][name].want = value[i][name].want + sig.count
+        end
+    end
+
+    return value
+end
+
+
+function add_value_to_reqprov(stopnum, value, requested, provided)
+    for chestindex, y in pairs(value) do
+        for itemname, z in pairs(y) do
+            local excess = z.have - z.want - z.reqcoming
+            local shortage = z.want - z.have - z.provcoming
+
+            if excess > 0 then
+                if provided[chestindex] == nil then
+                    provided[chestindex] = {}
+                end
+                if provided[chestindex][itemname] == nil then
+                    provided[chestindex][itemname] = {}
+                end
+                provided[chestindex][itemname][stopnum] = excess
+            end
+
+            if shortage > 0 then
+                if requested[chestindex] == nil then
+                    requested[chestindex] = {}
+                end
+                if requested[chestindex][itemname] == nil then
+                    requested[chestindex][itemname] = {}
+                end
+                requested[chestindex][itemname][stopnum] = shortage
+            end
+        end
+    end
+end
+
+
 function service_requests()
     -- iterate over all stops, then chests and combinators within them
     -- compare chest contents with combinator, figure out who wants items and who has items
     -- for each item type take the requests and create an action from the provider
 
-    local values = {}  -- chestindex -> itemname -> stopnum -> {have, want, coming}
+    local values = {}  -- stopnum -> chestindex -> itemname -> {have, want, coming}
     local requested = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
     local provided = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
 
     -- Calculate values
-    for w, x in pairs(global.stopchests) do
-        local stop = x.stop
-        local chests = x.chests
-        log("Stop:" .. fstr(stop))
+    for stopnum, x in pairs(global.stopchests) do
+        log("Stop: " .. fstr(x.stop))
 
-        for i, chest in pairs(chests) do
-            local combi = global.combinators[chest.unit_number]
-            local signals = merge_combinator_signals(combi)
-            local inv = chest.get_inventory(defines.inventory.chest).get_contents()
-
-            -- XXX FIXME does not account for actions (pending trains)
-            -- Add inventory to values
-            for name, amount in pairs(inv) do
-                if values[i] == nil then
-                    values[i] = {}
-                end
-                if values[i][name] == nil then
-                    values[i][name] = {}
-                end
-                if values[i][name][stop.unit_number] == nil then
-                    values[i][name][stop.unit_number] = {have=0, want=0, reqcoming=0, provcoming=0}
-                end
-                values[i][name][stop.unit_number].have = values[i][name][stop.unit_number].have + amount
-            end
-
-            -- Add signals to values
-            for name, sig in pairs(signals) do
-                if values[i] == nil then
-                    values[i] = {}
-                end
-                if values[i][name] == nil then
-                    values[i][name] = {}
-                end
-                if values[i][name][stop.unit_number] == nil then
-                    values[i][name][stop.unit_number] = {have=0, want=0, reqcoming=0, provcoming=0}
-                end
-                values[i][name][stop.unit_number].want = values[i][name][stop.unit_number].want + sig.count
-            end
-        end
+        local value = calculate_value_for_stop(stopnum)
+        values[stopnum] = value
+        add_value_to_reqprov(stopnum, value, requested, provided)
     end
 
     log("Values: " .. fstr(values))
     -- Process values into requests/provided
-    for chestindex, x in pairs(values) do
-        for itemname, y in pairs(x) do
-            for stopnum, z in pairs(y) do
-                local excess = z.have - z.want - z.reqcoming
-                local shortage = z.want - z.have - z.provcoming
-
-                if excess > 0 then
-                    if provided[chestindex] == nil then
-                        provided[chestindex] = {}
-                    end
-                    if provided[chestindex][itemname] == nil then
-                        provided[chestindex][itemname] = {}
-                    end
-                    provided[chestindex][itemname][stopnum] = excess
-                end
-
-                if shortage > 0 then
-                    if requested[chestindex] == nil then
-                        requested[chestindex] = {}
-                    end
-                    if requested[chestindex][itemname] == nil then
-                        requested[chestindex][itemname] = {}
-                    end
-                    requested[chestindex][itemname][stopnum] = shortage
-                end
-            end
-        end
+    for stopnum, value in pairs(values) do
     end
     log("Requested: " .. fstr(requested))
     log("Provided: " .. fstr(provided))
