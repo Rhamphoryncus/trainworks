@@ -43,6 +43,10 @@ script.on_init(function()
     global.combinators = {}  -- Combinators containing request amounts for each chest
     global.train_actions = {}  -- Trains in progress
     global.stop_actions = {}  -- Actions pending for the chests of each stop
+    global.values = {}  -- stopnum -> chestindex -> itemname -> {have, want, coming}
+    global.requested = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
+    global.provided = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
+
 end)
 
 
@@ -309,7 +313,10 @@ function calculate_value_for_stop(stopnum)
 end
 
 
-function add_value_to_reqprov(stopnum, value, requested, provided)
+function add_value_to_reqprov(stopnum, value)
+    local requested = global.requested
+    local provided = global.provided
+
     for chestindex, y in pairs(value) do
         for itemname, z in pairs(y) do
             local excess = z.have - z.want - z.reqcoming
@@ -339,34 +346,54 @@ function add_value_to_reqprov(stopnum, value, requested, provided)
 end
 
 
-function service_requests()
-    -- iterate over all stops, then chests and combinators within them
-    -- compare chest contents with combinator, figure out who wants items and who has items
-    -- for each item type take the requests and create an action from the provider
+function remove_value_from_reqprov(stopnum, value)
+    local requested = global.requested
+    local provided = global.provided
 
-    local values = {}  -- stopnum -> chestindex -> itemname -> {have, want, coming}
-    local requested = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
-    local provided = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
+    if value == nil then
+        return
+    end
 
-    -- Calculate values
+    for chestindex, y in pairs(value) do
+        for itemname, z in pairs(y) do
+            if provided[chestindex] ~= nil and provided[chestindex][itemname] ~= nil then
+                provided[chestindex][itemname][stopnum] = nil
+            end
+
+            if requested[chestindex] ~= nil and requested[chestindex][itemname] ~= nil then
+                requested[chestindex][itemname][stopnum] = nil
+            end
+        end
+    end
+end
+
+
+function update_reqprov()
+    -- Calculate values, update reqprov
     for stopnum, x in pairs(global.stopchests) do
         log("Stop: " .. fstr(x.stop))
 
+        remove_value_from_reqprov(stopnum, global.values[stopnum])
+        global.values[stopnum] = nil
+
         local value = calculate_value_for_stop(stopnum)
-        values[stopnum] = value
-        add_value_to_reqprov(stopnum, value, requested, provided)
+        global.values[stopnum] = value
+        add_value_to_reqprov(stopnum, value)
     end
 
-    log("Values: " .. fstr(values))
-    log("Requested: " .. fstr(requested))
-    log("Provided: " .. fstr(provided))
+    log("Values: " .. fstr(global.values))
+    log("Requested: " .. fstr(global.requested))
+    log("Provided: " .. fstr(global.provided))
+end
 
+
+function service_requests()
     -- Loop through requests and see if something is in provided
-    for chestindex, x in pairs(requested) do
+    for chestindex, x in pairs(global.requested) do
         for itemname, stops in pairs(x) do
             for stopnum, amount in pairs(stops) do
-                if provided[chestindex] ~= nil then
-                    local pstops = provided[chestindex][itemname]
+                if global.provided[chestindex] ~= nil then
+                    local pstops = global.provided[chestindex][itemname]
                     if pstops ~= nil then
                         for pstopnum, pamount in pairs(pstops) do
                             local actions = {{}}
@@ -385,6 +412,7 @@ end
 script.on_event({defines.events.on_tick},
     function (e)
         if e.tick % 30 == 0 then
+            update_reqprov()
             service_requests()
         end
     end
