@@ -50,13 +50,19 @@ script.on_init(function()
 end)
 
 
-function dispatch_train(source, dest, actions)
+function dispatch_train(sourcenum, destnum, actions)
     local train = global.train
     if train == nil or not train.valid or train.state ~= defines.train_state.wait_station or train.station == nil or train.station.backer_name ~= "Depot" then
         -- No trains available
         return
     end
     log("Found depoted train: " .. fstr(train.state) .. " at " .. train.station.backer_name)
+
+    local source = global.stopchests[sourcenum].stop
+    local dest = global.stopchests[destnum].stop
+    if not source.valid or not dest.valid then
+        return
+    end
 
     local x = {
         current=1,
@@ -87,14 +93,16 @@ end
 function transfer_inventories(src, dest, actions)
     for itemname, amount in pairs(actions) do
         local removed = src.remove({name=itemname, count=amount})
-        local inserted = dest.insert({name=itemname, count=removed})
-        local bounce = removed - inserted
-        if bounce > 0 then
-            log("Bounce: " .. fstr(bounce))
-            local bounced = src.insert({name=itemname, count=bounce})
-            if bounce ~= bounced then
-                -- XXX print an error to console.  This might happen if a user applies filters or a bar to a chest/wagon
-                log("Unable to bounce, items deleted!")
+        if removed > 0 then
+            local inserted = dest.insert({name=itemname, count=removed})
+            local bounce = removed - inserted
+            if bounce > 0 then
+                log("Bounce: " .. fstr(bounce))
+                local bounced = src.insert({name=itemname, count=bounce})
+                if bounce ~= bounced then
+                    -- XXX print an error to console.  This might happen if a user applies filters or a bar to a chest/wagon
+                    log("Unable to bounce, items deleted!")
+                end
             end
         end
     end
@@ -111,6 +119,9 @@ function action_train(train)
         local chest = global.stopchests[action.src.unit_number].chests[1]
         log("Chest: " .. fstr(chest))
         log("Blah: " .. fstr(global.stopchests) .. " ... " .. fstr(action))
+        if not chest.valid then
+            return
+        end
         local c_inv = chest.get_inventory(defines.inventory.chest)
         local w_inv = train.carriages[2].get_inventory(defines.inventory.cargo_wagon)
         transfer_inventories(c_inv, w_inv, action.actions[1])
@@ -121,6 +132,9 @@ function action_train(train)
         local chest = global.stopchests[action.dest.unit_number].chests[1]
         log("Chest: " .. fstr(chest))
         log("Blah: " .. fstr(global.stopchests) .. " ... " .. fstr(action))
+        if not chest.valid then
+            return
+        end
         local c_inv = chest.get_inventory(defines.inventory.chest)
         local w_inv = train.carriages[2].get_inventory(defines.inventory.cargo_wagon)
         transfer_inventories(w_inv, c_inv, action.actions[1])
@@ -281,6 +295,10 @@ function calculate_value_for_stop(stopnum)
     local chests = global.stopchests[stopnum].chests
 
     for i, chest in pairs(chests) do
+        if not chest.valid then
+            return nil
+        end
+
         local combi = global.combinators[chest.unit_number]
         local signals = merge_combinator_signals(combi)
         local inv = chest.get_inventory(defines.inventory.chest).get_contents()
@@ -316,6 +334,10 @@ end
 function add_value_to_reqprov(stopnum, value)
     local requested = global.requested
     local provided = global.provided
+
+    if value == nil then
+        return
+    end
 
     for chestindex, y in pairs(value) do
         for itemname, z in pairs(y) do
@@ -399,7 +421,7 @@ function service_requests()
                             local actions = {{}}
                             actions[chestindex][itemname] = math.min(amount, pamount)
                             log("Min2: " .. fstr(actions))
-                            dispatch_train(global.stopchests[pstopnum].stop, global.stopchests[stopnum].stop, actions)
+                            dispatch_train(pstopnum, stopnum, actions)
                         end
                     end
                 end
