@@ -41,8 +41,8 @@ script.on_init(function()
     global.depot = nil
     global.stopchests = {}  -- The chests belonging to each stop
     global.combinators = {}  -- Combinators containing request amounts for each chest
-    global.train_actions = {}  -- Trains in progress
-    global.stop_actions = {}  -- Actions pending for the chests of each stop
+    global.train_actions = {}  -- trainid -> {source, dest, actions}  -- Trains in progress
+    global.stop_actions = {}  -- stopnum -> {actions, load}  -- Actions pending for each stop
     global.values = {}  -- stopnum -> chestindex -> itemname -> {have, want, coming}
     global.requested = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
     global.provided = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
@@ -152,12 +152,12 @@ function action_train(train)
 
     if train.schedule.current == 1 then
         -- Load
-        transfer_inventories(get_chest_inventories(action.src.unit_number), get_train_inventories(train), action.actions[1])
+        transfer_inventories(get_chest_inventories(action.src.unit_number), get_train_inventories(train), action.actions)
 
         global.stop_actions[action.src.unit_number] = nil  -- Delete the load request
     elseif train.schedule.current == 2 then
         -- Unload
-        transfer_inventories(get_train_inventories(train), get_chest_inventories(action.dest.unit_number), action.actions[1])
+        transfer_inventories(get_train_inventories(train), get_chest_inventories(action.dest.unit_number), action.actions)
 
         global.stop_actions[action.dest.unit_number] = nil  -- Delete the unload request
         global.train_actions[train.id] = nil
@@ -438,8 +438,8 @@ function service_requests()
                     local pstops = global.provided[chestindex][itemname]
                     if pstops ~= nil then
                         for pstopnum, pamount in pairs(pstops) do
-                            local actions = {{}}
-                            actions[chestindex][itemname] = math.min(amount, pamount)
+                            local actions = {}
+                            actions[itemname] = math.min(amount, pamount)
                             log("Min2: " .. fstr(actions))
                             dispatch_train(pstopnum, stopnum, actions)
                         end
