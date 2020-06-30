@@ -44,8 +44,8 @@ script.on_init(function()
     global.train_actions = {}  -- trainid -> {source, dest, actions}  -- Trains in progress
     global.stop_actions = {}  -- stopnum -> {actions, load}  -- Actions pending for each stop
     global.values = {}  -- stopnum -> chestindex -> itemname -> {have, want, coming}
-    global.requested = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
-    global.provided = {}  -- chestindex -> itemname -> {stopnum, chestindex, amount}
+    global.requested = {}  -- itemname -> stopnum -> amount
+    global.provided = {}  -- itemname -> stopnum -> amount
 
 end)
 
@@ -365,23 +365,17 @@ function add_value_to_reqprov(stopnum, value)
             local shortage = z.want - z.have - z.provcoming
 
             if excess > 0 then
-                if provided[chestindex] == nil then
-                    provided[chestindex] = {}
+                if provided[itemname] == nil then
+                    provided[itemname] = {}
                 end
-                if provided[chestindex][itemname] == nil then
-                    provided[chestindex][itemname] = {}
-                end
-                provided[chestindex][itemname][stopnum] = excess
+                provided[itemname][stopnum] = excess
             end
 
             if shortage > 0 then
-                if requested[chestindex] == nil then
-                    requested[chestindex] = {}
+                if requested[itemname] == nil then
+                    requested[itemname] = {}
                 end
-                if requested[chestindex][itemname] == nil then
-                    requested[chestindex][itemname] = {}
-                end
-                requested[chestindex][itemname][stopnum] = shortage
+                requested[itemname][stopnum] = shortage
             end
         end
     end
@@ -398,12 +392,12 @@ function remove_value_from_reqprov(stopnum, value)
 
     for chestindex, y in pairs(value) do
         for itemname, z in pairs(y) do
-            if provided[chestindex] ~= nil and provided[chestindex][itemname] ~= nil then
-                provided[chestindex][itemname][stopnum] = nil
+            if provided[itemname] ~= nil then
+                provided[itemname][stopnum] = nil
             end
 
-            if requested[chestindex] ~= nil and requested[chestindex][itemname] ~= nil then
-                requested[chestindex][itemname][stopnum] = nil
+            if requested[itemname] ~= nil then
+                requested[itemname][stopnum] = nil
             end
         end
     end
@@ -431,19 +425,15 @@ end
 
 function service_requests()
     -- Loop through requests and see if something is in provided
-    for chestindex, x in pairs(global.requested) do
-        for itemname, stops in pairs(x) do
-            for stopnum, amount in pairs(stops) do
-                if global.provided[chestindex] ~= nil then
-                    local pstops = global.provided[chestindex][itemname]
-                    if pstops ~= nil then
-                        for pstopnum, pamount in pairs(pstops) do
-                            local actions = {}
-                            actions[itemname] = math.min(amount, pamount)
-                            log("Min2: " .. fstr(actions))
-                            dispatch_train(pstopnum, stopnum, actions)
-                        end
-                    end
+    for itemname, stops in pairs(global.requested) do
+        for stopnum, amount in pairs(stops) do
+            local pstops = global.provided[itemname]
+            if pstops ~= nil then
+                for pstopnum, pamount in pairs(pstops) do
+                    local actions = {}
+                    actions[itemname] = math.min(amount, pamount)
+                    log("Min2: " .. fstr(actions))
+                    dispatch_train(pstopnum, stopnum, actions)
                 end
             end
         end
