@@ -94,6 +94,9 @@ function extract_inventories(invs, itemname, amount)
     -- XXX FIXME should first attempt a balanced extraction
     local extracted = 0
     for i, inv in pairs(invs) do
+        if amount - extracted <= 0 then
+            break
+        end
         extracted = extracted + inv.remove({name=itemname, count=(amount-extracted)})
     end
     return extracted
@@ -104,6 +107,9 @@ function insert_inventories(invs, itemname, amount)
     -- Or maybe that should be a separate function used only on chests, not cargo wagons?
     local inserted = 0
     for i, inv in pairs(invs) do
+        if amount - inserted <= 0 then
+            break
+        end
         inserted = inserted + inv.insert({name=itemname, count=(amount-inserted)})
     end
     return inserted
