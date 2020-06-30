@@ -324,26 +324,20 @@ function calculate_value_for_stop(stopnum)
         local inv = chest.get_inventory(defines.inventory.chest).get_contents()
 
         -- XXX FIXME does not account for actions (pending trains)
-        -- Add inventory to values
-        for name, amount in pairs(inv) do
-            if value[i] == nil then
-                value[i] = {}
+        -- Add inventory to value
+        for itemname, amount in pairs(inv) do
+            if value[itemname] == nil then
+                value[itemname] = {have=0, want=0, reqcoming=0, provcoming=0}
             end
-            if value[i][name] == nil then
-                value[i][name] = {have=0, want=0, reqcoming=0, provcoming=0}
-            end
-            value[i][name].have = value[i][name].have + amount
+            value[itemname].have = value[itemname].have + amount
         end
 
-        -- Add signals to values
-        for name, sig in pairs(signals) do
-            if value[i] == nil then
-                value[i] = {}
+        -- Add signals to value
+        for itemname, sig in pairs(signals) do
+            if value[itemname] == nil then
+                value[itemname] = {have=0, want=0, reqcoming=0, provcoming=0}
             end
-            if value[i][name] == nil then
-                value[i][name] = {have=0, want=0, reqcoming=0, provcoming=0}
-            end
-            value[i][name].want = value[i][name].want + sig.count
+            value[itemname].want = value[itemname].want + sig.count
         end
     end
 
@@ -359,24 +353,22 @@ function add_value_to_reqprov(stopnum, value)
         return
     end
 
-    for chestindex, y in pairs(value) do
-        for itemname, z in pairs(y) do
-            local excess = z.have - z.want - z.reqcoming
-            local shortage = z.want - z.have - z.provcoming
+    for itemname, z in pairs(value) do
+        local excess = z.have - z.want - z.reqcoming
+        local shortage = z.want - z.have - z.provcoming
 
-            if excess > 0 then
-                if provided[itemname] == nil then
-                    provided[itemname] = {}
-                end
-                provided[itemname][stopnum] = excess
+        if excess > 0 then
+            if provided[itemname] == nil then
+                provided[itemname] = {}
             end
+            provided[itemname][stopnum] = excess
+        end
 
-            if shortage > 0 then
-                if requested[itemname] == nil then
-                    requested[itemname] = {}
-                end
-                requested[itemname][stopnum] = shortage
+        if shortage > 0 then
+            if requested[itemname] == nil then
+                requested[itemname] = {}
             end
+            requested[itemname][stopnum] = shortage
         end
     end
 end
@@ -390,15 +382,13 @@ function remove_value_from_reqprov(stopnum, value)
         return
     end
 
-    for chestindex, y in pairs(value) do
-        for itemname, z in pairs(y) do
-            if provided[itemname] ~= nil then
-                provided[itemname][stopnum] = nil
-            end
+    for itemname, z in pairs(value) do
+        if provided[itemname] ~= nil then
+            provided[itemname][stopnum] = nil
+        end
 
-            if requested[itemname] ~= nil then
-                requested[itemname][stopnum] = nil
-            end
+        if requested[itemname] ~= nil then
+            requested[itemname][stopnum] = nil
         end
     end
 end
