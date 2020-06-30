@@ -90,15 +90,34 @@ function reset_train(train)
     train.schedule = x
 end
 
+function extract_inventories(invs, itemname, amount)
+    -- XXX FIXME should first attempt a balanced extraction
+    local extracted = 0
+    for i, inv in pairs(invs) do
+        extracted = extracted + inv.remove({name=itemname, count=(amount-extracted)})
+    end
+    return extracted
+end
+
+function insert_inventories(invs, itemname, amount)
+    -- XXX FIXME should first attempt a balanced insertion
+    -- Or maybe that should be a separate function used only on chests, not cargo wagons?
+    local inserted = 0
+    for i, inv in pairs(invs) do
+        inserted = inserted + inv.insert({name=itemname, count=(amount-inserted)})
+    end
+    return inserted
+end
+
 function transfer_inventories(src, dest, actions)
     for itemname, amount in pairs(actions) do
-        local removed = src.remove({name=itemname, count=amount})
+        local removed = extract_inventories(src, itemname, amount)
         if removed > 0 then
-            local inserted = dest.insert({name=itemname, count=removed})
+            local inserted = insert_inventories(dest, itemname, removed)
             local bounce = removed - inserted
             if bounce > 0 then
                 log("Bounce: " .. fstr(bounce))
-                local bounced = src.insert({name=itemname, count=bounce})
+                local bounced = insert_inventories(src, itemname, bounce)
                 if bounce ~= bounced then
                     -- XXX print an error to console.  This might happen if a user applies filters or a bar to a chest/wagon
                     log("Unable to bounce, items deleted!")
@@ -106,6 +125,23 @@ function transfer_inventories(src, dest, actions)
             end
         end
     end
+end
+
+function get_chest_inventories(stopnum)
+    local invs = {}
+    local chests = global.stopchests[stopnum].chests
+    for i, chest in pairs(chests) do
+        table.insert(invs, chest.get_inventory(defines.inventory.chest))
+    end
+    return invs
+end
+
+function get_train_inventories(train)
+    local invs = {}
+    for i, wagon in pairs(train.cargo_wagons) do
+        table.insert(invs, wagon.get_inventory(defines.inventory.cargo_wagon))
+    end
+    return invs
 end
 
 function action_train(train)
@@ -116,28 +152,12 @@ function action_train(train)
 
     if train.schedule.current == 1 then
         -- Load
-        local chest = global.stopchests[action.src.unit_number].chests[1]
-        log("Chest: " .. fstr(chest))
-        log("Blah: " .. fstr(global.stopchests) .. " ... " .. fstr(action))
-        if not chest.valid then
-            return
-        end
-        local c_inv = chest.get_inventory(defines.inventory.chest)
-        local w_inv = train.carriages[2].get_inventory(defines.inventory.cargo_wagon)
-        transfer_inventories(c_inv, w_inv, action.actions[1])
+        transfer_inventories(get_chest_inventories(action.src.unit_number), get_train_inventories(train), action.actions[1])
 
         global.stop_actions[action.src.unit_number] = nil  -- Delete the load request
     elseif train.schedule.current == 2 then
         -- Unload
-        local chest = global.stopchests[action.dest.unit_number].chests[1]
-        log("Chest: " .. fstr(chest))
-        log("Blah: " .. fstr(global.stopchests) .. " ... " .. fstr(action))
-        if not chest.valid then
-            return
-        end
-        local c_inv = chest.get_inventory(defines.inventory.chest)
-        local w_inv = train.carriages[2].get_inventory(defines.inventory.cargo_wagon)
-        transfer_inventories(w_inv, c_inv, action.actions[1])
+        transfer_inventories(get_train_inventories(train), get_chest_inventories(action.dest.unit_number), action.actions[1])
 
         global.stop_actions[action.dest.unit_number] = nil  -- Delete the unload request
         global.train_actions[train.id] = nil
