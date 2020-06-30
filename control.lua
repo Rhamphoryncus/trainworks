@@ -43,7 +43,7 @@ script.on_init(function()
     global.combinators = {}  -- Combinators containing request amounts for each chest
     global.train_actions = {}  -- trainid -> {source, dest, actions}  -- Trains in progress
     global.stop_actions = {}  -- stopnum -> {actions, load}  -- Actions pending for each stop
-    global.values = {}  -- stopnum -> chestindex -> itemname -> {have, want, coming}
+    global.values = {}  -- stopnum -> itemname -> {have, want, coming}
     global.requested = {}  -- itemname -> stopnum -> amount
     global.provided = {}  -- itemname -> stopnum -> amount
 
@@ -105,6 +105,7 @@ end
 function insert_inventories(invs, itemname, amount)
     -- XXX FIXME should first attempt a balanced insertion
     -- Or maybe that should be a separate function used only on chests, not cargo wagons?
+    -- Or maintain balance in the chests, not just the transfer amounts?
     local inserted = 0
     for i, inv in pairs(invs) do
         if amount - inserted <= 0 then
