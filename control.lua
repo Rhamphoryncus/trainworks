@@ -218,7 +218,7 @@ function find_stop_chests(stop)
     end
 
     -- XXX FIXME can't use stop as key, has to be stop.unit_number
-    global.stopchests[stop.unit_number] = {stop=stop, chests=chestlist}
+    global.stopchests[stop.unit_number] = {stop=stop, chests=chestlist, last_activity=game.tick}
 --    log("b2 " .. serpent.block(global.stopchests) .. " % " .. serpent.line(#global.stopchests))
 --    log("ARGH " .. serpent.line(global.stopchests[stop.unit_number]))
 
@@ -420,17 +420,56 @@ function update_reqprov()
 end
 
 
+function calc_provider_weight(reqstopnum, provstopnum, itemname, wanted, have)
+    -- XXX scale distance and make it negative
+    -- threshold wanted/have, scale it, and make it negative
+    -- scale idle time and make it positive
+    local weight = 0
+    local reqpos = global.stopchests[reqstopnum].stop.position
+    local provpos = global.stopchests[provstopnum].stop.position
+
+    -- Taxi cab distance between stops
+    local distance = math.abs(reqpos.x - provpos.x) + math.abs(reqpos.y - provpos.y)
+    weight = weight - distance / 1000
+
+    -- Insufficient amount in provider
+    if wanted > have then
+        weight = weight - wanted/ have
+    end
+
+    -- Time since last serviced
+    weight = weight + (game.tick - global.stopchests[provstopnum].last_activity) / 1000
+
+    return weight
+end
+
+
 function service_requests()
     -- Loop through requests and see if something is in provided
+    -- XXX FIXME store last time each stop was serviced.  Use it with a threshold/multiplier to decide which station to use.
     for itemname, stops in pairs(global.requested) do
         for stopnum, amount in pairs(stops) do
+            -- XXX cap wanted amount by train size
             local pstops = global.provided[itemname]
             if pstops ~= nil then
+                local beststopnum = nil
+                local bestweight = -100  -- Doubles as a threshold for having no good providers
+                local bestamount = nil
+
                 for pstopnum, pamount in pairs(pstops) do
+                    local newweight = calc_provider_weight(stopnum, pstopnum, itemname, amount, pamount)
+                    if newweight >= bestweight then
+                        bestweight = newweight
+                        beststopnum = pstopnum
+                        bestamount = pamount
+                    end
+                end
+
+                if beststopnum ~= nil then
                     local actions = {}
-                    actions[itemname] = math.min(amount, pamount)
+                    actions[itemname] = math.min(amount, bestamount)
                     log("Min2: " .. fstr(actions))
-                    dispatch_train(pstopnum, stopnum, actions)
+                    dispatch_train(beststopnum, stopnum, actions)
                 end
             end
         end
