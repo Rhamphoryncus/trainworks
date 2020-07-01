@@ -160,11 +160,13 @@ function action_train(train)
     if train.schedule.current == 1 then
         -- Load
         transfer_inventories(get_chest_inventories(action.src.unit_number), get_train_inventories(train), action.actions)
+        global.stopchests[action.src.unit_number].last_activity = game.tick
 
         global.stop_actions[action.src.unit_number] = nil  -- Delete the load request
     elseif train.schedule.current == 2 then
         -- Unload
         transfer_inventories(get_train_inventories(train), get_chest_inventories(action.dest.unit_number), action.actions)
+        global.stopchests[action.dest.unit_number].last_activity = game.tick
 
         global.stop_actions[action.dest.unit_number] = nil  -- Delete the unload request
         global.train_actions[train.id] = nil
@@ -217,7 +219,7 @@ function find_stop_chests(stop)
         log("Inserted 1 " .. serpent.line(chest) .. " into " .. serpent.line(chestlist) .. " of size " .. serpent.line(#chestlist))
     end
 
-    -- XXX FIXME can't use stop as key, has to be stop.unit_number
+    -- XXX FIXME last_activity should be per-typename and provided vs requested
     global.stopchests[stop.unit_number] = {stop=stop, chests=chestlist, last_activity=game.tick}
 --    log("b2 " .. serpent.block(global.stopchests) .. " % " .. serpent.line(#global.stopchests))
 --    log("ARGH " .. serpent.line(global.stopchests[stop.unit_number]))
@@ -434,7 +436,7 @@ function calc_provider_weight(reqstopnum, provstopnum, itemname, wanted, have)
 
     -- Insufficient amount in provider
     if wanted > have then
-        weight = weight - wanted/ have
+        weight = weight - wanted / have - 1
     end
 
     -- Time since last serviced
