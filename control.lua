@@ -1,9 +1,9 @@
 -- Todo:
--- Unravel service_requests() into persistent state
--- Restructure to have a unified state that incorporates the items, the request amounts, and outstanding actions, then derive provides and requests from that
--- Because each chest will only have a few of the many item types comparing the old state with new state will indicate what provides/requests to remove before adding the new ones
--- register_chest(), deregister_chest(), update_chest()
--- maybe also a refresh_state() that deletes the globals and rescans everything
+-- Add association between a depot and the set of stations it services, called a route
+-- Use station name as route key.  This does mean renaming invalidates the route
+-- Lots of restructuring needed
+-- global.routes is routename -> {depots, trains, stops, provided, requested}
+
 
 
 function fstr(o)
@@ -38,8 +38,8 @@ end
 
 script.on_init(function()
     global.train = nil
-    global.stopchests = {}  -- The chests belonging to each stop
-    global.combinators = {}  -- Combinators containing request amounts for each chest
+    global.stopchests = {}  -- stopnum -> {stop, chests, last_activity}  -- The chests belonging to each stop
+    global.combinators = {}  -- chestnum -> combi  -- Combinators containing request amounts for each chest
     global.train_actions = {}  -- trainid -> {source, dest, actions}  -- Trains in progress
     global.stop_actions = {}  -- stopnum -> {actions, load}  -- Actions pending for each stop
     global.values = {}  -- stopnum -> itemname -> {have, want, coming}
@@ -495,10 +495,6 @@ script.on_event({defines.events.on_built_entity},
         elseif e.created_entity.name == "tw_stop" then
             find_stop_chests(e.created_entity)
         elseif e.created_entity.name == "locomotive" then
---            -- XXX modifying a train invalidates the old entity
---            global.train = e.created_entity.train
---            log(serpent.block(global))
---            log("train_state list: " .. serpent.block(defines.train_state))
         elseif e.created_entity.name == "tw_chest" then
             register_chest(e.created_entity)
         end
