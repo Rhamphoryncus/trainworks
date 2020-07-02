@@ -38,7 +38,6 @@ end
 
 script.on_init(function()
     global.train = nil
-    global.depot = nil
     global.stopchests = {}  -- The chests belonging to each stop
     global.combinators = {}  -- Combinators containing request amounts for each chest
     global.train_actions = {}  -- trainid -> {source, dest, actions}  -- Trains in progress
@@ -52,7 +51,7 @@ end)
 
 function dispatch_train(sourcenum, destnum, actions)
     local train = global.train
-    if train == nil or not train.valid or train.state ~= defines.train_state.wait_station or train.station == nil or train.station.backer_name ~= "Depot" then
+    if train == nil or not train.valid or train.state ~= defines.train_state.wait_station or train.station == nil or train.station.prototype.name ~= "tw_depot" then
         -- No trains available
         return
     end
@@ -69,7 +68,7 @@ function dispatch_train(sourcenum, destnum, actions)
         records={
             {station=source.backer_name, wait_conditions={{type="time", compare_type="and", ticks=120}}},
             {station=dest.backer_name, wait_conditions={{type="time", compare_type="and", ticks=120}}},
-            {station="Depot", wait_conditions={}}
+            {station=train.station.backer_name, wait_conditions={}}
         }
     }
     train.schedule = x
@@ -84,7 +83,7 @@ function reset_train(train)
     local x = {
         current=1,
         records={
-            {station="Depot", wait_conditions={}}
+            {station=train.station.backer_name, wait_conditions={}}
         }
     }
     train.schedule = x
@@ -454,8 +453,8 @@ function service_requests()
             -- XXX cap wanted amount by train size
             local pstops = global.provided[itemname]
             if pstops ~= nil then
-                local beststopnum = nil
                 local bestweight = -100  -- Doubles as a threshold for having no good providers
+                local beststopnum = nil
                 local bestamount = nil
 
                 for pstopnum, pamount in pairs(pstops) do
@@ -493,8 +492,6 @@ script.on_event({defines.events.on_built_entity},
     function (e)
         log("Built " .. e.created_entity.name)
         if e.created_entity.name == "tw_depot" then
-            global.depot = e.created_entity
-            global.depot.backer_name = "Depot"
         elseif e.created_entity.name == "tw_stop" then
             find_stop_chests(e.created_entity)
         elseif e.created_entity.name == "locomotive" then
@@ -516,7 +513,7 @@ script.on_event({defines.events.on_train_changed_state},
         if train.state == defines.train_state.wait_station and e.old_state == defines.train_state.arrive_station and train.station ~= nil then
             log("Train in station: " .. train.station.backer_name)
             global.train = train
-            if train.station.backer_name == "Depot" then
+            if train.station.prototype.name == "tw_depot" then
                 reset_train(train)
             else
                 action_train(train)
