@@ -3,6 +3,7 @@
 -- Use station name as route key.  This does mean renaming invalidates the route
 -- Lots of restructuring needed
 -- global.routes is routename -> {depots, trains, stops, provided, requested}
+-- Does need a flag that means "all stops"
 
 
 
@@ -37,7 +38,6 @@ end
 
 
 script.on_init(function()
-    global.train = nil
     global.stopchests = {}  -- stopnum -> {stop, chests, last_activity}  -- The chests belonging to each stop
     global.combinators = {}  -- chestnum -> combi  -- Combinators containing request amounts for each chest
     global.train_actions = {}  -- trainid -> {source, dest, actions}  -- Trains in progress
@@ -45,14 +45,26 @@ script.on_init(function()
     global.values = {}  -- stopnum -> itemname -> {have, want, coming}
     global.requested = {}  -- itemname -> stopnum -> amount
     global.provided = {}  -- itemname -> stopnum -> amount
-
+    global.routes = {}  -- routename -> {depots, trains, stops, provided, requested}
+        -- depots is stopnum -> true
+        -- trains is trainid -> true
+        -- stops is stopnum -> true
+        -- provided is itemname -> stopnum -> amount
+        -- requested is itemname -> stopnum -> amount
+    global.universal_routes = {}  -- routename -> true
 end)
 
 
-function dispatch_train(sourcenum, destnum, actions)
-    local train = global.train
-    if train == nil or not train.valid or train.state ~= defines.train_state.wait_station or train.station == nil or train.station.prototype.name ~= "tw_depot" then
-        -- No trains available
+function dispatch_train(routename, sourcenum, destnum, actions)
+    local train = nil
+    for maybetrainid, maybetrain in pairs(global.routes[routename].trains) do
+        if maybetrain.valid and maybetrain.state == defines.train_state.wait_station and maybetrain.station ~= nil and maybetrain.station.prototype.name == "tw_depot" then
+            train = maybetrain
+            break
+        end
+    end
+    if train == nil then
+        -- No train available
         return
     end
     log("Found depoted train: " .. fstr(train.state) .. " at " .. train.station.backer_name)
@@ -80,6 +92,8 @@ function dispatch_train(sourcenum, destnum, actions)
 end
 
 function reset_train(train)
+    global.routes[train.station.backer_name].trains[train.id] = train
+
     local x = {
         current=1,
         records={
@@ -173,6 +187,13 @@ function action_train(train)
 end
 
 
+function add_stop_to_universal_routes(stopnum)
+    for routename, x in pairs(global.universal_routes) do
+        global.routes[routename].stops[stopnum] = true
+    end
+end
+
+
 function find_stop_chests(stop)
     -- loop through the chest and each chest's neighbour, making sure they're aligned on the tracks (later) and have no stop registered yet
     -- if they have a stop abort the register, make the item drop or something instead.
@@ -220,6 +241,7 @@ function find_stop_chests(stop)
 
     -- XXX FIXME last_activity should be per-typename and provided vs requested
     global.stopchests[stop.unit_number] = {stop=stop, chests=chestlist, last_activity=game.tick}
+    add_stop_to_universal_routes(stop.unit_number)
 --    log("b2 " .. serpent.block(global.stopchests) .. " % " .. serpent.line(#global.stopchests))
 --    log("ARGH " .. serpent.line(global.stopchests[stop.unit_number]))
 
@@ -446,8 +468,13 @@ end
 
 
 function service_requests()
+    -- XXX FIXME giant bodge.  This should be a loop giving provided/requested instead
+    local routename = nil
+    for a, b in pairs(global.routes) do
+        routename = a
+    end
+
     -- Loop through requests and see if something is in provided
-    -- XXX FIXME store last time each stop was serviced.  Use it with a threshold/multiplier to decide which station to use.
     for itemname, stops in pairs(global.requested) do
         for stopnum, amount in pairs(stops) do
             -- XXX cap wanted amount by train size
@@ -470,7 +497,7 @@ function service_requests()
                     local actions = {}
                     actions[itemname] = math.min(amount, bestamount)
                     log("Min2: " .. fstr(actions))
-                    dispatch_train(beststopnum, stopnum, actions)
+                    dispatch_train(routename, beststopnum, stopnum, actions)
                 end
             end
         end
@@ -492,6 +519,9 @@ script.on_event({defines.events.on_built_entity},
     function (e)
         log("Built " .. e.created_entity.name)
         if e.created_entity.name == "tw_depot" then
+            -- XXX temporary bodge until I have a proper GUI
+            global.routes[e.created_entity.backer_name] = {depots={}, trains={}, stops={}, provided={}, requested={}}
+            global.universal_routes[e.created_entity.backer_name] = true
         elseif e.created_entity.name == "tw_stop" then
             find_stop_chests(e.created_entity)
         elseif e.created_entity.name == "locomotive" then
@@ -506,9 +536,9 @@ script.on_event({defines.events.on_train_changed_state},
     function (e)
         local train = e.train
         log("Train state: " .. fstr(e.old_state) .. " -> " .. fstr(train.state))
+        -- XXX FIXME this should only respond to trains that have joined a depot
         if train.state == defines.train_state.wait_station and e.old_state == defines.train_state.arrive_station and train.station ~= nil then
             log("Train in station: " .. train.station.backer_name)
-            global.train = train
             if train.station.prototype.name == "tw_depot" then
                 reset_train(train)
             else
