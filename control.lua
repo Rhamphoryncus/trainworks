@@ -43,8 +43,6 @@ script.on_init(function()
     global.train_actions = {}  -- trainid -> {source, dest, actions}  -- Trains in progress
     global.stop_actions = {}  -- stopnum -> {actions, load}  -- Actions pending for each stop
     global.values = {}  -- stopnum -> itemname -> {have, want, coming}
-    global.requested = {}  -- itemname -> stopnum -> amount
-    global.provided = {}  -- itemname -> stopnum -> amount
     global.routes = {}  -- routename -> {depots, trains, stops, provided, requested}
         -- depots is stopnum -> true
         -- trains is trainid -> true
@@ -425,23 +423,22 @@ end
 
 
 function update_reqprov()
-    -- XXX FIXME giant bodge.  This should be a loop giving provided/requested instead
-    local routename = nil
-    for a, b in pairs(global.routes) do
-        routename = a
+    local newvalues = {}
+    for stopnum, x in pairs(global.stopchests) do
+        newvalues[stopnum] = calculate_value_for_stop(stopnum)
     end
 
     -- Calculate values, update reqprov
-    for stopnum, x in pairs(global.stopchests) do
-        log("Stop: " .. fstr(x.stop))
+    for routename, route in pairs(global.routes) do
+        for stopnum, x in pairs(global.stopchests) do
+            log("Stop/" .. fstr(routename) .. ": " .. fstr(x.stop))
 
-        remove_value_from_reqprov(routename, stopnum, global.values[stopnum])
-        global.values[stopnum] = nil
-
-        local value = calculate_value_for_stop(stopnum)
-        global.values[stopnum] = value
-        add_value_to_reqprov(routename, stopnum, value)
+            remove_value_from_reqprov(routename, stopnum, global.values[stopnum])
+            add_value_to_reqprov(routename, stopnum, newvalues[stopnum])
+        end
     end
+
+    global.values = newvalues
 
     log("Values: " .. fstr(global.values))
 --    log("Requested: " .. fstr(global.requested))
@@ -474,39 +471,32 @@ end
 
 
 function service_requests()
-    -- XXX FIXME giant bodge.  This should be a loop giving provided/requested instead
-    local routename = nil
-    for a, b in pairs(global.routes) do
-        routename = a
-    end
-    if routename == nil then
-        return
-    end
-
     -- Loop through requests and see if something is in provided
-    for itemname, stops in pairs(global.routes[routename].requested) do
-        for stopnum, amount in pairs(stops) do
-            -- XXX cap wanted amount by train size
-            local pstops = global.routes[routename].provided[itemname]
-            if pstops ~= nil then
-                local bestweight = -100  -- Doubles as a threshold for having no good providers
-                local beststopnum = nil
-                local bestamount = nil
+    for routename, route in pairs(global.routes) do
+        for itemname, stops in pairs(global.routes[routename].requested) do
+            for stopnum, amount in pairs(stops) do
+                -- XXX cap wanted amount by train size
+                local pstops = global.routes[routename].provided[itemname]
+                if pstops ~= nil then
+                    local bestweight = -100  -- Doubles as a threshold for having no good providers
+                    local beststopnum = nil
+                    local bestamount = nil
 
-                for pstopnum, pamount in pairs(pstops) do
-                    local newweight = calc_provider_weight(stopnum, pstopnum, itemname, amount, pamount)
-                    if newweight >= bestweight then
-                        bestweight = newweight
-                        beststopnum = pstopnum
-                        bestamount = pamount
+                    for pstopnum, pamount in pairs(pstops) do
+                        local newweight = calc_provider_weight(stopnum, pstopnum, itemname, amount, pamount)
+                        if newweight >= bestweight then
+                            bestweight = newweight
+                            beststopnum = pstopnum
+                            bestamount = pamount
+                        end
                     end
-                end
 
-                if beststopnum ~= nil then
-                    local actions = {}
-                    actions[itemname] = math.min(amount, bestamount)
-                    log("Min2: " .. fstr(actions))
-                    dispatch_train(routename, beststopnum, stopnum, actions)
+                    if beststopnum ~= nil then
+                        local actions = {}
+                        actions[itemname] = math.min(amount, bestamount)
+                        log("Min2: " .. fstr(actions))
+                        dispatch_train(routename, beststopnum, stopnum, actions)
+                    end
                 end
             end
         end
