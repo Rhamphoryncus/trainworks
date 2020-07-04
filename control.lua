@@ -4,7 +4,9 @@
 -- Lots of restructuring needed
 -- global.routes is routename -> {depots, trains, stops, provided, requested}
 -- Does need a flag that means "all stops"
-
+-- Still need to add use of .depots
+-- Need to add the "coming" part of values so I can have multiple trains
+-- global.stop_actions needs to become stopnum -> trainid -> {actions, load}
 
 
 function fstr(o)
@@ -41,7 +43,9 @@ script.on_init(function()
     global.stopchests = {}  -- stopnum -> {stop, chests, last_activity}  -- The chests belonging to each stop
     global.combinators = {}  -- chestnum -> combi  -- Combinators containing request amounts for each chest
     global.train_actions = {}  -- trainid -> {source, dest, actions}  -- Trains in progress
-    global.stop_actions = {}  -- stopnum -> {actions, load}  -- Actions pending for each stop
+        -- actions is itemname -> amount
+    global.stop_actions = {}  -- stopnum -> trainid -> {actions, load}  -- Actions pending for each stop
+        -- actions is itemname -> amount
     global.values = {}  -- stopnum -> itemname -> {have, want, coming}
     global.routes = {}  -- routename -> {depots, trains, stops, provided, requested}
         -- depots is stopnum -> true
@@ -84,8 +88,8 @@ function dispatch_train(routename, sourcenum, destnum, actions)
     train.schedule = x
 
     global.train_actions[train.id] = {src=source, dest=dest, actions=actions}
-    global.stop_actions[source.unit_number] = {actions=actions, load=true}
-    global.stop_actions[dest.unit_number] = {actions=actions, load=false}
+    global.stop_actions[source.unit_number][train.id] = {actions=actions, load=true}
+    global.stop_actions[dest.unit_number][train.id] = {actions=actions, load=false}
     log("Dispatched train " .. fstr(train.id) .. " from " .. source.backer_name .. " to " .. dest.backer_name)
 end
 
@@ -173,13 +177,13 @@ function action_train(train)
         transfer_inventories(get_chest_inventories(action.src.unit_number), get_train_inventories(train), action.actions)
         global.stopchests[action.src.unit_number].last_activity = game.tick
 
-        global.stop_actions[action.src.unit_number] = nil  -- Delete the load request
+        global.stop_actions[action.src.unit_number][train.id] = nil  -- Delete the load request
     elseif train.schedule.current == 2 then
         -- Unload
         transfer_inventories(get_train_inventories(train), get_chest_inventories(action.dest.unit_number), action.actions)
         global.stopchests[action.dest.unit_number].last_activity = game.tick
 
-        global.stop_actions[action.dest.unit_number] = nil  -- Delete the unload request
+        global.stop_actions[action.dest.unit_number][train.id] = nil  -- Delete the unload request
         global.train_actions[train.id] = nil
     end
 end
@@ -239,6 +243,7 @@ function find_stop_chests(stop)
 
     -- XXX FIXME last_activity should be per-typename and provided vs requested
     global.stopchests[stop.unit_number] = {stop=stop, chests=chestlist, last_activity=game.tick}
+    global.stop_actions[stop.unit_number] = {}
     add_stop_to_universal_routes(stop.unit_number)
 --    log("b2 " .. serpent.block(global.stopchests) .. " % " .. serpent.line(#global.stopchests))
 --    log("ARGH " .. serpent.line(global.stopchests[stop.unit_number]))
@@ -355,7 +360,7 @@ function calculate_value_for_stop(stopnum)
         -- Add inventory to value
         for itemname, amount in pairs(inv) do
             if value[itemname] == nil then
-                value[itemname] = {have=0, want=0, reqcoming=0, provcoming=0}
+                value[itemname] = {have=0, want=0, pickup=0, dropoff=0}
             end
             value[itemname].have = value[itemname].have + amount
         end
@@ -363,9 +368,22 @@ function calculate_value_for_stop(stopnum)
         -- Add signals to value
         for itemname, sig in pairs(signals) do
             if value[itemname] == nil then
-                value[itemname] = {have=0, want=0, reqcoming=0, provcoming=0}
+                value[itemname] = {have=0, want=0, pickup=0, dropoff=0}
             end
             value[itemname].want = value[itemname].want + sig.count
+        end
+    end
+
+    for trainid, x in pairs(global.stop_actions[stopnum]) do
+        for itemname, amount in pairs(x.actions) do
+            if value[itemname] == nil then
+                value[itemname] = {have=0, want=0, pickup=0, dropoff=0}
+            end
+            if x.load then
+                value[itemname].pickup = value[itemname].pickup + amount
+            else
+                value[itemname].dropoff = value[itemname].dropoff + amount
+            end
         end
     end
 
@@ -382,8 +400,8 @@ function add_value_to_reqprov(routename, stopnum, value)
     end
 
     for itemname, z in pairs(value) do
-        local excess = z.have - z.want - z.reqcoming
-        local shortage = z.want - z.have - z.provcoming
+        local excess = z.have - z.want - z.pickup
+        local shortage = z.want - z.have - z.dropoff
 
         if excess > 0 then
             if provided[itemname] == nil then
