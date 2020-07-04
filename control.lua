@@ -1,12 +1,4 @@
 -- Todo:
--- Add association between a depot and the set of stations it services, called a route
--- Use station name as route key.  This does mean renaming invalidates the route
--- Lots of restructuring needed
--- global.routes is routename -> {depots, trains, stops, provided, requested}
--- Does need a flag that means "all stops"
--- Still need to add use of .depots
--- Need to add the "coming" part of values so I can have multiple trains
--- global.stop_actions needs to become stopnum -> trainid -> {actions, pickup}
 
 
 function fstr(o)
