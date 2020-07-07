@@ -1,4 +1,8 @@
 -- Todo:
+-- Add a scripts.gui.lua and start experimenting with having a GUI
+
+
+require("scripts.gui")
 
 
 function fstr(o)
@@ -519,6 +523,7 @@ script.on_event({defines.events.on_tick},
         if e.tick % 30 == 0 then
             update_reqprov()
             service_requests()
+            update_gui()
         end
     end
 )
