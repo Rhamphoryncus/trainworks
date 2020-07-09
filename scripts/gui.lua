@@ -1,4 +1,3 @@
--- XXX FIXME
 require("mod-gui")
 
 

@@ -1,5 +1,4 @@
 -- Todo:
--- Add a scripts.gui.lua and start experimenting with having a GUI
 
 
 require("scripts.gui")
