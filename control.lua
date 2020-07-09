@@ -50,6 +50,7 @@ script.on_init(function()
         -- provided is itemname -> stopnum -> amount
         -- requested is itemname -> stopnum -> amount
     global.universal_routes = {}  -- routename -> true
+    global.gui_selected_route = {}  -- playernum -> routename
 end)
 
 

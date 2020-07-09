@@ -24,10 +24,19 @@ function create_gui(player)
     {
         type="frame",
         name="trainworks_stations",
-        caption="Stations",
+        caption="Status",
         style=mod_gui.frame_style
     }
     mod_gui.get_frame_flow(player).trainworks_stations.visible = false
+
+    mod_gui.get_frame_flow(player).add
+    {
+        type="frame",
+        name="trainworks_modify",
+        caption="Add/Remove",
+        style=mod_gui.frame_style
+    }
+    mod_gui.get_frame_flow(player).trainworks_modify.visible = false
 end
 
 
@@ -57,24 +66,56 @@ function clear_route_list(player)
 end
 
 
-function populate_station_list(player, routename)
+function populate_routestatus(player, routename)
     local frame = mod_gui.get_frame_flow(player).trainworks_stations
     local flow = frame.add{type="flow", name="trainworks_stationflow", direction="vertical"}
-    -- XXX button to add stops and button to make (or clear) universal
-    flow.add{type="button", name="trainworks_stationaddstations", caption="Add stations"}
-    flow.add{type="button", name="trainworks_stationuniversal", caption="Make universal"}
+    -- Top buttons
+    flow.add{type="button", name="trainworks_showmodify", caption="Modify"}
+    -- List of stops
     local pane = flow.add{type="scroll-pane", name="trainworks_stationpane", vertical_scroll_policy="auto-and-reserve-space"}
-    local table = pane.add{type="table", name="trainworks_stationtable", column_count=2}
     for stopnum, x in pairs(global.routes[routename].stops) do
-        table.add{type="label", caption=global.stopchests[stopnum].stop.backer_name}
-        table.add{type="button", name=("trainworks_station_"..fstr(stopnum)), caption="X"}
-        -- XXX FIXME should use a more appropriate LuaStyle that's not overly wide
+        pane.add{type="label", caption=global.stopchests[stopnum].stop.backer_name}
     end
     frame.visible = true
 end
 
-function clear_station_list(player)
+function clear_routestatus(player)
     local frame = mod_gui.get_frame_flow(player).trainworks_stations
+    frame.visible = false
+    frame.clear()
+end
+
+
+function populate_modify(player, routename)
+    local frame = mod_gui.get_frame_flow(player).trainworks_modify
+    local flow = frame.add{type="flow", name="trainworks_modifyflow", direction="vertical"}
+    flow.add{type="button", name="trainworks_modifyuniversal", caption="Make universal"}
+    flow.add{type="textfield", name="trainworks_modifyfilter"}
+
+    -- List of stations that could be added to this route
+    local toppane = flow.add{type="scroll-pane", name="trainworks_modifytoppane", vertical_scroll_policy="auto-and-reserve-space"}
+    for stopnum, x in pairs(global.stopchests) do
+        if not global.routes[routename].stops[stopnum] then
+            toppane.add{type="button", name=("trainworks_modify_"..fstr(stopnum)), caption=x.stop.backer_name}
+        end
+    end
+
+    -- XXX FIXME consider a horizontal rule here
+
+    -- List of stations already in this route
+    local bottompane = flow.add{type="scroll-pane", name="trainworks_modifybottompane", vertical_scroll_policy="auto-and-reserve-space"}
+    local table = bottompane.add{type="table", name="trainworks_modifytable", column_count=2}
+    for stopnum, x in pairs(global.routes[routename].stops) do
+        table.add{type="label", caption=global.stopchests[stopnum].stop.backer_name}
+        table.add{type="button", name=("trainworks_modify_"..fstr(stopnum)), caption="X"}
+        -- XXX FIXME should use a more appropriate LuaStyle that's not overly wide
+    end
+
+    frame.visible = true
+end
+
+function clear_modify(player)
+    local frame = mod_gui.get_frame_flow(player).trainworks_modify
     frame.visible = false
     frame.clear()
 end
@@ -87,18 +128,29 @@ script.on_event({defines.events.on_gui_click},
             local frame = mod_gui.get_frame_flow(player)
             if frame.trainworks_frame.visible then
                 clear_route_list(player)
-                clear_station_list(player)
+                clear_routestatus(player)
+                clear_modify(player)
             else
                 populate_route_list(player)
             end
         elseif e.element.name:match("^trainworks_route_") then
             local routename = e.element.caption
+            global.gui_selected_route[e.player_index] = routename  -- Cache is for later
             log("Bah "..routename)
             local frame = mod_gui.get_frame_flow(player).trainworks_stations
             if frame.visible then
-                clear_station_list(player)
+                clear_routestatus(player)
+                clear_modify(player)
             else
-                populate_station_list(player, routename)
+                populate_routestatus(player, routename)
+            end
+        elseif e.element.name == "trainworks_showmodify" then
+            local routename = global.gui_selected_route[e.player_index]
+            local frame = mod_gui.get_frame_flow(player).trainworks_modify
+            if frame.visible then
+                clear_modify(player)
+            else
+                populate_modify(player, routename)
             end
         end
     end
