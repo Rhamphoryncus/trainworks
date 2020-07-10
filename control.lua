@@ -1,4 +1,7 @@
 -- Todo:
+-- Do something with the GUI.
+-- Make the universal toggle work
+-- Make adding/removing stops work
 
 
 require("scripts.gui")

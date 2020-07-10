@@ -36,6 +36,16 @@ function create_gui(player)
         style=mod_gui.frame_style
     }
     mod_gui.get_frame_flow(player).trainworks_modify.visible = false
+
+    -- XXX FIXME this would be better centered
+    mod_gui.get_frame_flow(player).add
+    {
+        type="frame",
+        name="trainworks_confirmuniversal",
+        caption="Confirm making universal",
+        style=mod_gui.frame_style
+    }
+    mod_gui.get_frame_flow(player).trainworks_confirmuniversal.visible = false
 end
 
 
@@ -95,7 +105,7 @@ function populate_modify(player, routename)
     local toppane = flow.add{type="scroll-pane", name="trainworks_modifytoppane", vertical_scroll_policy="auto-and-reserve-space"}
     for stopnum, x in pairs(global.stopchests) do
         if not global.routes[routename].stops[stopnum] then
-            toppane.add{type="button", name=("trainworks_modify_"..fstr(stopnum)), caption=x.stop.backer_name}
+            toppane.add{type="button", name=("trainworks_add_"..fstr(stopnum)), caption=x.stop.backer_name}
         end
     end
 
@@ -106,7 +116,7 @@ function populate_modify(player, routename)
     local table = bottompane.add{type="table", name="trainworks_modifytable", column_count=2}
     for stopnum, x in pairs(global.routes[routename].stops) do
         table.add{type="label", caption=global.stopchests[stopnum].stop.backer_name}
-        table.add{type="button", name=("trainworks_modify_"..fstr(stopnum)), caption="X"}
+        table.add{type="button", name=("trainworks_remove_"..fstr(stopnum)), caption="X"}
         -- XXX FIXME should use a more appropriate LuaStyle that's not overly wide
     end
 
@@ -117,6 +127,15 @@ function clear_modify(player)
     local frame = mod_gui.get_frame_flow(player).trainworks_modify
     frame.visible = false
     frame.clear()
+end
+
+
+function route_add_stop(player, routename, stopnum)
+    global.routes[routename].stops[stopnum] = true
+end
+
+function route_remove_stop(player, routename, stopnum)
+    global.routes[routename].stops[stopnum] = nil
 end
 
 
@@ -134,7 +153,7 @@ script.on_event({defines.events.on_gui_click},
             end
         elseif e.element.name:match("^trainworks_route_") then
             local routename = e.element.caption
-            global.gui_selected_route[e.player_index] = routename  -- Cache is for later
+            global.gui_selected_route[e.player_index] = routename  -- Cache it for later
             log("Bah "..routename)
             local frame = mod_gui.get_frame_flow(player).trainworks_stations
             if frame.visible then
@@ -151,6 +170,16 @@ script.on_event({defines.events.on_gui_click},
             else
                 populate_modify(player, routename)
             end
+        elseif e.element.name:match("^trainworks_add_") then
+            local routename = global.gui_selected_route[e.player_index]
+            local stopnum = tonumber(e.element.name:match("^trainworks_add_(.*)$"))
+            route_add_stop(player, routename, stopnum)
+            log("Add "..fstr(stopnum))
+        elseif e.element.name:match("^trainworks_remove_") then
+            local routename = global.gui_selected_route[e.player_index]
+            local stopnum = tonumber(e.element.name:match("^trainworks_remove_(.*)$"))
+            route_remove_stop(player, routename, stopnum)
+            log("Remove "..fstr(stopnum))
         end
     end
 )
