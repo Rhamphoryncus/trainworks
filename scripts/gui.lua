@@ -96,7 +96,8 @@ function populate_routestatus(playernum, routename)
     -- List of stops
     local pane = flow.add{type="scroll-pane", name="trainworks_stationpane", vertical_scroll_policy="auto-and-reserve-space"}
     for stopnum, x in pairs(global.routes[routename].stops) do
-        pane.add{type="label", caption=global.stopchests[stopnum].stop.backer_name}
+        local name = "label_"..tostring(stopnum)
+        pane.add{type="label", name=name, caption=global.stopchests[stopnum].stop.backer_name}
     end
     frame.visible = true
     global.gui_routestatus[playernum] = pane
@@ -145,12 +146,28 @@ function clear_modify(playernum)
 end
 
 
-function route_add_stop(player, routename, stopnum)
+function route_add_stop(playernum, routename, stopnum)
     global.routes[routename].stops[stopnum] = true
+
+    local pane = global.gui_routestatus[playernum]
+    if pane ~= nil then
+        local name = "label_"..tostring(stopnum)
+        if pane[name] == nil then
+            pane.add{type="label", name=name, caption=global.stopchests[stopnum].stop.backer_name}
+        end
+    end
 end
 
-function route_remove_stop(player, routename, stopnum)
+function route_remove_stop(playernum, routename, stopnum)
     global.routes[routename].stops[stopnum] = nil
+
+    local pane = global.gui_routestatus[playernum]
+    if pane ~= nil then
+        local name = "label_"..tostring(stopnum)
+        if pane[name] ~= nil then
+            pane[name].destroy()
+        end
+    end
 end
 
 
@@ -188,12 +205,12 @@ script.on_event({defines.events.on_gui_click},
         elseif e.element.name:match("^trainworks_add_") then
             local routename = global.gui_selected_route[e.player_index]
             local stopnum = tonumber(e.element.name:match("^trainworks_add_(.*)$"))
-            route_add_stop(player, routename, stopnum)
+            route_add_stop(e.player_index, routename, stopnum)
             log("Add "..fstr(stopnum))
         elseif e.element.name:match("^trainworks_remove_") then
             local routename = global.gui_selected_route[e.player_index]
             local stopnum = tonumber(e.element.name:match("^trainworks_remove_(.*)$"))
-            route_remove_stop(player, routename, stopnum)
+            route_remove_stop(e.player_index, routename, stopnum)
             log("Remove "..fstr(stopnum))
         end
     end
