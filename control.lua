@@ -2,6 +2,7 @@
 -- Do something with the GUI.
 -- Make the universal toggle work
 -- Make adding/removing stops work
+-- Make adding/removing stops update the GUI as it does so
 
 
 require("scripts.gui")
@@ -53,6 +54,9 @@ script.on_init(function()
         -- requested is itemname -> stopnum -> amount
     global.universal_routes = {}  -- routename -> true
     global.gui_selected_route = {}  -- playernum -> routename
+    global.gui_players = {}  -- playernum -> true
+
+    gui_initialize_players()
 end)
 
 
@@ -526,7 +530,6 @@ script.on_event({defines.events.on_tick},
         if e.tick % 30 == 0 then
             update_reqprov()
             service_requests()
-            update_gui()
         end
     end
 )

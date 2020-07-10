@@ -49,11 +49,24 @@ function create_gui(player)
 end
 
 
-function update_gui()
-    if not global.loaded_gui then
-        global.loaded_gui = true
-        -- XXX FIXME bodge
-        create_gui(game.players[1])
+function gui_player_joined(playernum)
+    if global.gui_players[playernum] == nil then
+        create_gui(game.players[playernum])
+        global.gui_players[playernum] = true
+    end
+end
+
+
+script.on_event({defines.events.on_player_joined_game},
+    function (e)
+        gui_player_joined(e.player_index)
+    end
+)
+
+
+function gui_initialize_players()
+    for playernum, player in pairs(game.players) do
+        gui_player_joined(playernum)
     end
 end
 
