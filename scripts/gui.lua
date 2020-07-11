@@ -121,7 +121,7 @@ function populate_modify(playernum, routename)
     local toppane = flow.add{type="scroll-pane", name="trainworks_modifytoppane", vertical_scroll_policy="auto-and-reserve-space"}
     for stopnum, x in pairs(global.stopchests) do
         if not global.routes[routename].stops[stopnum] then
-            toppane.add{type="button", name=("trainworks_add_"..fstr(stopnum)), caption=x.stop.backer_name}
+            toppane.add{type="button", name=("trainworks_add_"..tostring(stopnum)), caption=x.stop.backer_name}
         end
     end
 
@@ -131,29 +131,53 @@ function populate_modify(playernum, routename)
     local bottompane = flow.add{type="scroll-pane", name="trainworks_modifybottompane", vertical_scroll_policy="auto-and-reserve-space"}
     local table = bottompane.add{type="table", name="trainworks_modifytable", column_count=2}
     for stopnum, x in pairs(global.routes[routename].stops) do
-        table.add{type="label", caption=global.stopchests[stopnum].stop.backer_name}
-        table.add{type="button", name=("trainworks_remove_"..fstr(stopnum)), caption="X"}
+        table.add{type="label", name=("trainworks_removelabel_"..tostring(stopnum)), caption=global.stopchests[stopnum].stop.backer_name}
+        table.add{type="button", name=("trainworks_remove_"..tostring(stopnum)), caption="X"}
         -- XXX FIXME should use a more appropriate LuaStyle that's not overly wide
     end
 
     frame.visible = true
+    global.gui_routemodify[playernum] = flow
 end
 
 function clear_modify(playernum)
     local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_modify
     frame.visible = false
     frame.clear()
+    global.gui_routemodify[playernum] = nil
 end
 
 
 function route_add_stop(playernum, routename, stopnum)
     global.routes[routename].stops[stopnum] = true
 
-    local pane = global.gui_routestatus[playernum]
-    if pane ~= nil then
+    -- Add to status window
+    local statuspane = global.gui_routestatus[playernum]
+    if statuspane ~= nil then
         local name = "label_"..tostring(stopnum)
-        if pane[name] == nil then
-            pane.add{type="label", name=name, caption=global.stopchests[stopnum].stop.backer_name}
+        if statuspane[name] == nil then
+            statuspane.add{type="label", name=name, caption=global.stopchests[stopnum].stop.backer_name}
+        end
+    end
+
+    -- Remove from top of modify window
+    local modifypane = global.gui_routemodify[playernum]
+    if modifypane ~= nil then
+        local x = modifypane.trainworks_modifytoppane
+        local name = "trainworks_add_"..tostring(stopnum)
+        if x[name] ~= nil then
+            x[name].destroy()
+        end
+    end
+
+    -- Add to bottom of modify window
+    local modifypane = global.gui_routemodify[playernum]
+    if modifypane ~= nil then
+        local table = modifypane.trainworks_modifybottompane.trainworks_modifytable
+        local name = "trainworks_removelabel_"..tostring(stopnum)
+        if table[name] == nil then
+            table.add{type="label", name=name, caption=global.stopchests[stopnum].stop.backer_name}
+            table.add{type="button", name=("trainworks_remove_"..tostring(stopnum)), caption="X"}
         end
     end
 end
@@ -161,11 +185,33 @@ end
 function route_remove_stop(playernum, routename, stopnum)
     global.routes[routename].stops[stopnum] = nil
 
-    local pane = global.gui_routestatus[playernum]
-    if pane ~= nil then
+    -- Remove from status window
+    local statuspane = global.gui_routestatus[playernum]
+    if statuspane ~= nil then
         local name = "label_"..tostring(stopnum)
-        if pane[name] ~= nil then
-            pane[name].destroy()
+        if statuspane[name] ~= nil then
+            statuspane[name].destroy()
+        end
+    end
+
+    -- Add to top of modify window
+    local modifypane = global.gui_routemodify[playernum]
+    if modifypane ~= nil then
+        local x = modifypane.trainworks_modifytoppane
+        local name = "trainworks_add_"..tostring(stopnum)
+        if x[name] == nil then
+            x.add{type="button", name=name, caption=global.stopchests[stopnum].stop.backer_name}
+        end
+    end
+
+    -- Remove from bottom of modify window
+    local modifypane = global.gui_routemodify[playernum]
+    if modifypane ~= nil then
+        local table = modifypane.trainworks_modifybottompane.trainworks_modifytable
+        local name = "trainworks_removelabel_"..tostring(stopnum)
+        if table[name] ~= nil then
+            table[name].destroy()
+            table["trainworks_remove_"..tostring(stopnum)].destroy()
         end
     end
 end

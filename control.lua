@@ -56,6 +56,7 @@ script.on_init(function()
     global.gui_selected_route = {}  -- playernum -> routename
     global.gui_players = {}  -- playernum -> true
     global.gui_routestatus = {}  -- playernum -> guielement
+    global.gui_routemodify = {}  -- playernum -> guielement
 
     gui_initialize_players()
 end)
