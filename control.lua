@@ -196,7 +196,7 @@ end
 
 function add_stop_to_universal_routes(stopnum)
     for routename, x in pairs(global.universal_routes) do
-        global.routes[routename].stops[stopnum] = true
+        route_add_stop(routename, stopnum)
     end
 end
 
