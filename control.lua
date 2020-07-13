@@ -1,8 +1,6 @@
 -- Todo:
 -- Do something with the GUI.
 -- Make the universal toggle work
--- Make adding/removing stops work
--- Make adding/removing stops update the GUI as it does so
 
 
 require("scripts.gui")
@@ -453,8 +451,10 @@ function update_reqprov()
 
     -- Calculate values, update reqprov
     for routename, route in pairs(global.routes) do
-        for stopnum, x in pairs(global.stopchests) do
-            log("Stop/" .. fstr(routename) .. ": " .. fstr(x.stop))
+        -- XXX FIXME this should use global.routes[routename].stops instead
+        -- XXX also needs to handle changes in stops though
+        for stopnum, x in pairs(get_route_stops(routename)) do
+--            log("Stop/" .. fstr(routename) .. ": " .. fstr(x.stop))
 
             remove_value_from_reqprov(routename, stopnum, global.values[stopnum])
             add_value_to_reqprov(routename, stopnum, newvalues[stopnum])
@@ -466,6 +466,16 @@ function update_reqprov()
     log("Values: " .. fstr(global.values))
 --    log("Requested: " .. fstr(global.requested))
 --    log("Provided: " .. fstr(global.provided))
+end
+
+
+function get_route_stops(routename)
+    -- XXX The return signature here varies.  The key is the same either way, stopnum, but the value can either be 'true' or be a table
+    if global.universal_routes[routename] then
+        return global.stopchests
+    else
+        return global.routes[routename].stops
+    end
 end
 
 
