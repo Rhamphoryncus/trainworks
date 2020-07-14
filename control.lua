@@ -2,6 +2,8 @@
 -- Handle destruction of entities.  Probably just .valid checks and add them to a global "delete me" table to be processed later?
 -- Make service_requests() incremental.. somehow
 -- Add profiling hooks
+-- Replace routename with routenum
+-- Add a hardcoded route 1 as universal to share reqprov with all universal routes
 
 
 require("scripts.util")
@@ -17,7 +19,8 @@ script.on_init(function()
         -- actions is itemname -> amount
     global.stop_actions = {}  -- stopnum -> trainid -> {actions, pickup}  -- Actions pending for each stop
         -- actions is itemname -> amount
-    global.values = {}  -- stopnum -> itemname -> {have, want, coming}
+    global.values = {}  -- stopnum -> itemname -> {have, want, coming}  -- Previous pass's values
+    global.newvalues = {}  -- stopnum -> itemname -> {have, want, coming}  -- Current pass's values
     global.routes = {}  -- routename -> {depots, trains, stops, provided, requested}
         -- depots is stopnum -> true
         -- trains is trainid -> true
@@ -25,10 +28,15 @@ script.on_init(function()
         -- provided is itemname -> stopnum -> amount
         -- requested is itemname -> stopnum -> amount
     global.universal_routes = {}  -- routename -> true
+
     global.gui_selected_route = {}  -- playernum -> routename
     global.gui_players = {}  -- playernum -> true
     global.gui_routestatus = {}  -- playernum -> guielement
     global.gui_routemodify = {}  -- playernum -> guielement
+
+    global.route_group = nil  -- "A", "B", "C", "D", "E"...
+    global.route_index = nil  -- Index number into global.route_jobs
+    global.route_jobs = {}  -- Array of tasks to be performed, one tick at a time
 
     gui_initialize_players()
 end)
@@ -36,9 +44,8 @@ end)
 
 script.on_event({defines.events.on_tick},
     function (e)
-        if e.tick % 30 == 0 then
+        if e.tick % 1 == 0 then
             update_reqprov()
-            service_requests()
         end
     end
 )

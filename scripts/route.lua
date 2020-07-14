@@ -122,32 +122,69 @@ function update_reqprov()
     -- C, single: copy all routes into D
     -- D, multi: process reqprov for each route one at a time
 
-    local newvalues = {}
-    for stopnum, x in pairs(global.stopchests) do
-        newvalues[stopnum] = calculate_value_for_stop(stopnum)
-    end
-
-    -- Calculate values, update reqprov
-    for routename, route in pairs(global.routes) do
-        if route.dirty then
-            -- If a stop was removed from the route we need to reset requested/provided
-            route.requested = {}
-            route.provided = {}
-            route.dirty = false
+    if global.route_group == "A" then
+        -- Make a copy of global.stopchests but in a dense array form
+        global.route_group = "B"
+        global.route_index = 1
+        global.route_jobs = {}
+        for stopnum, x in pairs(global.stopchests) do
+            table.insert(global.route_jobs, stopnum)
         end
-
-        for stopnum, x in pairs(get_route_stops(routename)) do
-            remove_value_from_reqprov(routename, stopnum, global.values[stopnum])
-            add_value_to_reqprov(routename, stopnum, newvalues[stopnum])
+    elseif global.route_group == "B" then
+        -- Calculate values for each stop
+        local stopnum = global.route_jobs[global.route_index]
+        if stopnum == nil then
+            global.route_group = "C"
+            global.route_index = 1
+            global.route_jobs = {}
+        else
+            global.route_index = global.route_index + 1
+            global.newvalues[stopnum] = calculate_value_for_stop(stopnum)
         end
+    elseif global.route_group == "C" then
+        -- Make a copy of global.routes but in a dense array form
+        global.route_group = "D"
+        global.route_index = 1
+        global.route_jobs = {}
+        for routename, route in pairs(global.routes) do
+            table.insert(global.route_jobs, routename)
 
-        log("Requested: " .. fstr(routename) .. " " .. fstr(route.requested))
-        log("Provided: " .. fstr(routename) .. " " .. fstr(route.provided))
+            if route.dirty then
+                -- If a stop was removed from the route we need to reset requested/provided
+                route.requested = {}
+                route.provided = {}
+                route.dirty = false
+            end
+        end
+    elseif global.route_group == "D" then
+        -- Update reqprov from newvalues
+        local routename = global.route_jobs[global.route_index]
+        if routename == nil then
+            global.route_group = "E"
+            global.route_index = 1
+            global.route_jobs = {}
+        else
+            global.route_index = global.route_index + 1
+
+            for stopnum, x in pairs(get_route_stops(routename)) do
+                remove_value_from_reqprov(routename, stopnum, global.values[stopnum])
+                add_value_to_reqprov(routename, stopnum, global.newvalues[stopnum])
+            end
+
+            log("Requested: " .. fstr(routename) .. " " .. fstr(global.routes[routename].requested))
+            log("Provided: " .. fstr(routename) .. " " .. fstr(global.routes[routename].provided))
+        end
+    else
+        global.route_group = "A"
+        global.route_index = 1
+        global.route_jobs = {}
+        global.values = global.newvalues
+        global.newvalues = {}
+
+        log("Values: " .. fstr(global.values))
+
+        service_requests()
     end
-
-    global.values = newvalues
-
-    log("Values: " .. fstr(global.values))
 end
 
 
