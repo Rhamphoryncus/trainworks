@@ -85,7 +85,7 @@ function populate_routestatus(playernum, routename)
     flow.add{type="button", name="trainworks_showmodify", caption="Modify"}
     -- List of stops
     local pane = flow.add{type="scroll-pane", name="trainworks_stationpane", vertical_scroll_policy="auto-and-reserve-space"}
-    for stopnum, x in pairs(global.routes[routename].stops) do
+    for stopnum, x in pairs(get_route_stops(routename)) do
         local name = "label_"..tostring(stopnum)
         pane.add{type="label", name=name, caption=global.stopchests[stopnum].stop.backer_name}
     end
@@ -221,10 +221,12 @@ end
 
 function activate_universal(routename)
     global.universal_routes[routename] = true
-    -- XXX find status window, reset it to every station
-    -- XXX find modify window, disable add/remove buttons
-    -- XXX update universal toggle button
     for playernum, player in pairs(game.players) do
+        -- Update the route status window
+        clear_routestatus(playernum)
+        populate_routestatus(playernum, routename)
+
+        -- Update the route modify window
         local modifypane = global.gui_routemodify[playernum]
         if modifypane ~= nil then
             modifypane.trainworks_toggleuniversal.caption = "Undo universal"
@@ -243,10 +245,12 @@ end
 
 function deactivate_universal(routename)
     global.universal_routes[routename] = nil
-    -- XXX find status window, reset it to just listed stations
-    -- XXX find modify window, enable add/remove buttons
-    -- XXX update universal toggle button
     for playernum, player in pairs(game.players) do
+        -- Update the route status window
+        clear_routestatus(playernum)
+        populate_routestatus(playernum, routename)
+
+        -- Update the route modify window
         local modifypane = global.gui_routemodify[playernum]
         if modifypane ~= nil then
             modifypane.trainworks_toggleuniversal.caption = "Make universal"
