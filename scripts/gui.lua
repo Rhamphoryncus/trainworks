@@ -186,6 +186,7 @@ end
 
 function route_remove_stop(routename, stopnum)
     global.routes[routename].stops[stopnum] = nil
+    global.routes[routename].dirty = true
 
     for playernum, player in pairs(game.players) do
         -- Remove from status window
@@ -224,6 +225,8 @@ end
 
 function activate_universal(routename)
     global.universal_routes[routename] = true
+    global.routes[routename].dirty = true
+
     for playernum, player in pairs(game.players) do
         -- Update the route status window
         clear_routestatus(playernum)
@@ -248,6 +251,8 @@ end
 
 function deactivate_universal(routename)
     global.universal_routes[routename] = nil
+    global.routes[routename].dirty = true
+
     for playernum, player in pairs(game.players) do
         -- Update the route status window
         clear_routestatus(playernum)

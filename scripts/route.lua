@@ -116,6 +116,12 @@ end
 
 
 function update_reqprov()
+    -- XXX break up into "buckets"
+    -- A, single: copy all stopchests into B
+    -- B, multi: call calculate_value_for_stop() one at a time
+    -- C, single: copy all routes into D
+    -- D, multi: process reqprov for each route one at a time
+
     local newvalues = {}
     for stopnum, x in pairs(global.stopchests) do
         newvalues[stopnum] = calculate_value_for_stop(stopnum)
@@ -123,21 +129,25 @@ function update_reqprov()
 
     -- Calculate values, update reqprov
     for routename, route in pairs(global.routes) do
-        -- XXX FIXME this should use global.routes[routename].stops instead
-        -- XXX also needs to handle changes in stops though
-        for stopnum, x in pairs(get_route_stops(routename)) do
---            log("Stop/" .. fstr(routename) .. ": " .. fstr(x.stop))
+        if route.dirty then
+            -- If a stop was removed from the route we need to reset requested/provided
+            route.requested = {}
+            route.provided = {}
+            route.dirty = false
+        end
 
+        for stopnum, x in pairs(get_route_stops(routename)) do
             remove_value_from_reqprov(routename, stopnum, global.values[stopnum])
             add_value_to_reqprov(routename, stopnum, newvalues[stopnum])
         end
+
+        log("Requested: " .. fstr(routename) .. " " .. fstr(route.requested))
+        log("Provided: " .. fstr(routename) .. " " .. fstr(route.provided))
     end
 
     global.values = newvalues
 
     log("Values: " .. fstr(global.values))
---    log("Requested: " .. fstr(global.requested))
---    log("Provided: " .. fstr(global.provided))
 end
 
 
