@@ -1,3 +1,6 @@
+-- Just basic utility functions
+
+
 function fstr(o)
     -- Attempts to pretty-print while sanely handling factorio API types
     if type(o) == "number" then
