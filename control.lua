@@ -1,39 +1,8 @@
 -- Todo:
--- Do something with the GUI.
--- Make the universal toggle work
 
 
+require("scripts.util")
 require("scripts.gui")
-
-
-function fstr(o)
-    -- Attempts to pretty-print while sanely handling factorio API types
-    if type(o) == "number" then
-        return tostring(o)
-    elseif type(o) == "string" then
-        return o
-    elseif type(o) == "table" then
-        if o.valid ~= nil then
-            if not o.valid then
-                return "<invalid>"
-            elseif not pcall(function() return o.unit_number ~= nil and o.type ~= nil end) then
-                return "<non-entity>"
-            else
-                return "<" .. o.type .. "/" .. fstr(o.unit_number) .. ">"
-            end
-        else
-            local a = {}
-            for k,v in pairs(o) do
-                table.insert(a, fstr(k) .. " = " .. fstr(v))
-            end
-            return "{" .. table.concat(a, ", ") .. "}"
-        end
-    elseif type(o) == "nil" then
-        return "<nil>"
-    else
-        return tostring(o)
-    end
-end
 
 
 script.on_init(function()
@@ -192,13 +161,6 @@ function action_train(train)
 end
 
 
-function add_stop_to_universal_routes(stopnum)
-    for routename, x in pairs(global.universal_routes) do
-        route_add_stop(routename, stopnum)
-    end
-end
-
-
 function find_stop_chests(stop)
     -- loop through the chest and each chest's neighbour, making sure they're aligned on the tracks (later) and have no stop registered yet
     -- if they have a stop abort the register, make the item drop or something instead.
@@ -247,7 +209,6 @@ function find_stop_chests(stop)
     -- XXX FIXME last_activity should be per-typename and provided vs requested
     global.stopchests[stop.unit_number] = {stop=stop, chests=chestlist, last_activity=game.tick}
     global.stop_actions[stop.unit_number] = {}
-    add_stop_to_universal_routes(stop.unit_number)
 --    log("b2 " .. serpent.block(global.stopchests) .. " % " .. serpent.line(#global.stopchests))
 --    log("ARGH " .. serpent.line(global.stopchests[stop.unit_number]))
 
