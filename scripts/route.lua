@@ -121,33 +121,35 @@ function update_reqprov()
     -- B, multi: call calculate_value_for_stop() one at a time
     -- C, single: copy all routes into D
     -- D, multi: process reqprov for each route one at a time
+    -- XXX FIXME rework idea: merge this all into a single "jobs" array where each entry is a table with "group" or "handler" attributes and other attributes
+    -- It's fine to keep appending to the array as I iterate, that's O(1).  The array will get reset once I run out of tasks.
 
-    if global.route_group == "A" then
+    local task = global.route_jobs[global.route_index]
+    global.route_index = global.route_index + 1
+    if task == nil then
+        -- Reset and start a new pass
+        global.route_index = 1
+        global.route_jobs = {}
+        table.insert(global.route_jobs, {handler="A"})
+        global.values = global.newvalues
+        global.newvalues = {}
+
+        log("Values: " .. fstr(global.values))
+
+        service_requests()
+    elseif task.handler == "A" then
         -- Make a copy of global.stopchests but in a dense array form
-        global.route_group = "B"
-        global.route_index = 1
-        global.route_jobs = {}
         for stopnum, x in pairs(global.stopchests) do
-            table.insert(global.route_jobs, stopnum)
+            table.insert(global.route_jobs, {handler="B", stopnum=stopnum})
         end
-    elseif global.route_group == "B" then
+        table.insert(global.route_jobs, {handler="C"})
+    elseif task.handler == "B" then
         -- Calculate values for each stop
-        local stopnum = global.route_jobs[global.route_index]
-        if stopnum == nil then
-            global.route_group = "C"
-            global.route_index = 1
-            global.route_jobs = {}
-        else
-            global.route_index = global.route_index + 1
-            global.newvalues[stopnum] = calculate_value_for_stop(stopnum)
-        end
-    elseif global.route_group == "C" then
+        global.newvalues[task.stopnum] = calculate_value_for_stop(task.stopnum)
+    elseif task.handler == "C" then
         -- Make a copy of global.routes but in a dense array form
-        global.route_group = "D"
-        global.route_index = 1
-        global.route_jobs = {}
         for routename, route in pairs(global.routes) do
-            table.insert(global.route_jobs, routename)
+            table.insert(global.route_jobs, {handler="D", routename=routename})
 
             if route.dirty then
                 -- If a stop was removed from the route we need to reset requested/provided
@@ -156,34 +158,19 @@ function update_reqprov()
                 route.dirty = false
             end
         end
-    elseif global.route_group == "D" then
+    elseif task.handler == "D" then
         -- Update reqprov from newvalues
-        local routename = global.route_jobs[global.route_index]
-        if routename == nil then
-            global.route_group = "E"
-            global.route_index = 1
-            global.route_jobs = {}
-        else
-            global.route_index = global.route_index + 1
+        local routename = task.routename
 
-            for stopnum, x in pairs(get_route_stops(routename)) do
-                remove_value_from_reqprov(routename, stopnum, global.values[stopnum])
-                add_value_to_reqprov(routename, stopnum, global.newvalues[stopnum])
-            end
-
-            log("Requested: " .. fstr(routename) .. " " .. fstr(global.routes[routename].requested))
-            log("Provided: " .. fstr(routename) .. " " .. fstr(global.routes[routename].provided))
+        for stopnum, x in pairs(get_route_stops(routename)) do
+            remove_value_from_reqprov(routename, stopnum, global.values[stopnum])
+            add_value_to_reqprov(routename, stopnum, global.newvalues[stopnum])
         end
+
+        log("Requested: " .. fstr(routename) .. " " .. fstr(global.routes[routename].requested))
+        log("Provided: " .. fstr(routename) .. " " .. fstr(global.routes[routename].provided))
     else
-        global.route_group = "A"
-        global.route_index = 1
-        global.route_jobs = {}
-        global.values = global.newvalues
-        global.newvalues = {}
-
-        log("Values: " .. fstr(global.values))
-
-        service_requests()
+        error("Unexpected task handler")
     end
 end
 

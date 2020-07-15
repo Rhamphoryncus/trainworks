@@ -34,9 +34,8 @@ script.on_init(function()
     global.gui_routestatus = {}  -- playernum -> guielement
     global.gui_routemodify = {}  -- playernum -> guielement
 
-    global.route_group = nil  -- "A", "B", "C", "D", "E"...
-    global.route_index = nil  -- Index number into global.route_jobs
-    global.route_jobs = {}  -- Array of tasks to be performed, one tick at a time
+    global.route_index = 1  -- Index number into global.route_jobs
+    global.route_jobs = {}  -- {{handler, ...}, ...}  -- Array of tasks to be performed, one tick at a time
 
     gui_initialize_players()
 end)
