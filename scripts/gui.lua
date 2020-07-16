@@ -64,6 +64,16 @@ function gui_initialize_players()
 end
 
 
+function get_backer_name(stopnum)
+    local stop = global.stopchests[stopnum].stop
+    if stop.valid then
+        return stop.backer_name
+    else
+        return "<Station Removed>"
+    end
+end
+
+
 function populate_route_list(playernum)
     local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_frame
     local pane = frame.add{type="scroll-pane", name="trainworks_routepane", vertical_scroll_policy="auto-and-reserve-space"}
@@ -90,7 +100,7 @@ function populate_routestatus(playernum, routename)
     local pane = flow.add{type="scroll-pane", name="trainworks_stationpane", vertical_scroll_policy="auto-and-reserve-space"}
     for stopnum, x in pairs(get_route_stops(routename)) do
         local name = "label_"..tostring(stopnum)
-        pane.add{type="label", name=name, caption=global.stopchests[stopnum].stop.backer_name}
+        pane.add{type="label", name=name, caption=get_backer_name(stopnum)}
     end
     frame.visible = true
     global.gui_routestatus[playernum] = pane
@@ -119,7 +129,7 @@ function populate_modify(playernum, routename)
     for stopnum, x in pairs(global.stopchests) do
         if not global.routes[routename].stops[stopnum] then
             local enabled = not global.universal_routes[routename]
-            toppane.add{type="button", name=("trainworks_add_"..tostring(stopnum)), caption=x.stop.backer_name, enabled=enabled}
+            toppane.add{type="button", name=("trainworks_add_"..tostring(stopnum)), caption=get_backer_name(stopnum), enabled=enabled}
         end
     end
 
@@ -130,7 +140,7 @@ function populate_modify(playernum, routename)
     local table = bottompane.add{type="table", name="trainworks_modifytable", column_count=2}
     for stopnum, x in pairs(global.routes[routename].stops) do
         local enabled = not global.universal_routes[routename]
-        table.add{type="label", name=("trainworks_removelabel_"..tostring(stopnum)), caption=global.stopchests[stopnum].stop.backer_name}
+        table.add{type="label", name=("trainworks_removelabel_"..tostring(stopnum)), caption=get_backer_name(stopnum)}
         table.add{type="button", name=("trainworks_remove_"..tostring(stopnum)), caption="X", enabled=enabled}
         -- XXX FIXME should use a more appropriate LuaStyle that's not overly wide
     end
@@ -156,7 +166,7 @@ function route_add_stop(routename, stopnum)
         if statuspane ~= nil then
             local name = "label_"..tostring(stopnum)
             if statuspane[name] == nil then
-                statuspane.add{type="label", name=name, caption=global.stopchests[stopnum].stop.backer_name}
+                statuspane.add{type="label", name=name, caption=get_backer_name(stopnum)}
             end
         end
 
@@ -177,7 +187,7 @@ function route_add_stop(routename, stopnum)
             local name = "trainworks_removelabel_"..tostring(stopnum)
             if table[name] == nil then
                 local enabled = not global.universal_routes[routename]
-                table.add{type="label", name=name, caption=global.stopchests[stopnum].stop.backer_name}
+                table.add{type="label", name=name, caption=get_backer_name(stopnum)}
                 table.add{type="button", name=("trainworks_remove_"..tostring(stopnum)), caption="X", enabled=enabled}
             end
         end
@@ -205,7 +215,7 @@ function route_remove_stop(routename, stopnum)
             local name = "trainworks_add_"..tostring(stopnum)
             if x[name] == nil then
                 local enabled = not global.universal_routes[routename]
-                x.add{type="button", name=name, caption=global.stopchests[stopnum].stop.backer_name, enabled=enabled}
+                x.add{type="button", name=name, caption=get_backer_name(stopnum), enabled=enabled}
             end
         end
 

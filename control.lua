@@ -1,6 +1,5 @@
 -- Todo:
 -- Handle destruction of entities.  Probably just .valid checks and add them to a global "delete me" table to be processed later?
--- Make service_requests() incremental.. somehow
 -- Add profiling hooks
 -- Replace routename with routenum
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
