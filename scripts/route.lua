@@ -122,7 +122,7 @@ function tasks.copy_stopchests(task)
         table.insert(global.route_jobs, {handler="calculate_values", stopnum=stopnum})
     end
 
-    table.insert(global.route_jobs, {handler="copy_routes"})
+    table.insert(global.route_jobs, {handler="copy_reqprov_routes"})
 end
 
 
@@ -132,7 +132,7 @@ function tasks.calculate_values(task)
 end
 
 
-function tasks.copy_routes(task)
+function tasks.copy_reqprov_routes(task)
     -- Make a copy of global.routes but in a dense array form
     for routename, route in pairs(global.routes) do
         table.insert(global.route_jobs, {handler="update_reqprov", routename=routename})
@@ -145,7 +145,7 @@ function tasks.copy_routes(task)
         end
     end
 
-    table.insert(global.route_jobs, {handler="service_requests"})
+    table.insert(global.route_jobs, {handler="copy_service_routes"})
 end
 
 
@@ -211,39 +211,47 @@ function calc_provider_weight(reqstopnum, provstopnum, itemname, wanted, have)
 end
 
 
-function tasks.service_requests()
-    -- Updating finished
+function tasks.copy_service_routes(task)
+    -- Updating values and reqprov has finished
     global.values = global.newvalues
     global.newvalues = {}
 
     log("Values: " .. fstr(global.values))
 
-    -- Loop through requests and see if something is in provided
+    -- Make a copy of global.routes but in a dense array form
     for routename, route in pairs(global.routes) do
-        for itemname, stops in pairs(global.routes[routename].requested) do
-            for stopnum, amount in pairs(stops) do
-                -- XXX cap wanted amount by train size
-                local pstops = global.routes[routename].provided[itemname]
-                if pstops ~= nil then
-                    local bestweight = -100  -- Doubles as a threshold for having no good providers
-                    local beststopnum = nil
-                    local bestamount = nil
+        table.insert(global.route_jobs, {handler="service_route_requests", routename=routename})
+    end
+end
 
-                    for pstopnum, pamount in pairs(pstops) do
-                        local newweight = calc_provider_weight(stopnum, pstopnum, itemname, amount, pamount)
-                        if newweight >= bestweight then
-                            bestweight = newweight
-                            beststopnum = pstopnum
-                            bestamount = pamount
-                        end
-                    end
 
-                    if beststopnum ~= nil then
-                        local actions = {}
-                        actions[itemname] = math.min(amount, bestamount)
-                        log("Min2: " .. fstr(actions))
-                        dispatch_train(routename, beststopnum, stopnum, actions)
+function tasks.service_route_requests(task)
+    -- Loop through requested items and see if something is in provided
+    local routename = task.routename
+
+    for itemname, stops in pairs(global.routes[routename].requested) do
+        for stopnum, amount in pairs(stops) do
+            -- XXX cap wanted amount by train size
+            local pstops = global.routes[routename].provided[itemname]
+            if pstops ~= nil then
+                local bestweight = -100  -- Doubles as a threshold for having no good providers
+                local beststopnum = nil
+                local bestamount = nil
+
+                for pstopnum, pamount in pairs(pstops) do
+                    local newweight = calc_provider_weight(stopnum, pstopnum, itemname, amount, pamount)
+                    if newweight >= bestweight then
+                        bestweight = newweight
+                        beststopnum = pstopnum
+                        bestamount = pamount
                     end
+                end
+
+                if beststopnum ~= nil then
+                    local actions = {}
+                    actions[itemname] = math.min(amount, bestamount)
+                    log("Min2: " .. fstr(actions))
+                    dispatch_train(routename, beststopnum, stopnum, actions)
                 end
             end
         end
