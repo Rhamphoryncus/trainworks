@@ -192,8 +192,14 @@ function calc_provider_weight(reqstopnum, provstopnum, itemname, wanted, have)
     -- threshold wanted/have, scale it, and make it negative
     -- scale idle time and make it positive
     local weight = 0
-    local reqpos = global.stopchests[reqstopnum].stop.position
-    local provpos = global.stopchests[provstopnum].stop.position
+    local reqstop = global.stopchests[reqstopnum].stop
+    local provstop = global.stopchests[provstopnum].stop
+    if not reqstop.valid or not provstop.valid then
+        -- Stop has been removed
+        return -math.huge
+    end
+    local reqpos = reqstop.position
+    local provpos = provstop.position
 
     -- Taxi cab distance between stops
     local distance = math.abs(reqpos.x - provpos.x) + math.abs(reqpos.y - provpos.y)
