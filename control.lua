@@ -44,7 +44,7 @@ end)
 script.on_event({defines.events.on_tick},
     function (e)
         if e.tick % 1 == 0 then
-            update_reqprov()
+            process_routes()
         end
     end
 )

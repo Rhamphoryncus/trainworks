@@ -115,62 +115,64 @@ function remove_value_from_reqprov(routename, stopnum, value)
 end
 
 
-function update_reqprov()
-    -- XXX break up into "buckets"
-    -- A, single: copy all stopchests into B
-    -- B, multi: call calculate_value_for_stop() one at a time
-    -- C, single: copy all routes into D
-    -- D, multi: process reqprov for each route one at a time
-    -- XXX FIXME rework idea: merge this all into a single "jobs" array where each entry is a table with "group" or "handler" attributes and other attributes
-    -- It's fine to keep appending to the array as I iterate, that's O(1).  The array will get reset once I run out of tasks.
+tasks = {}
+function tasks.copy_stopchests(task)
+    -- Make a copy of global.stopchests but in a dense array form
+    for stopnum, x in pairs(global.stopchests) do
+        table.insert(global.route_jobs, {handler="calculate_values", stopnum=stopnum})
+    end
 
+    table.insert(global.route_jobs, {handler="copy_routes"})
+end
+
+
+function tasks.calculate_values(task)
+    -- Calculate values for each stop
+    global.newvalues[task.stopnum] = calculate_value_for_stop(task.stopnum)
+end
+
+
+function tasks.copy_routes(task)
+    -- Make a copy of global.routes but in a dense array form
+    for routename, route in pairs(global.routes) do
+        table.insert(global.route_jobs, {handler="update_reqprov", routename=routename})
+
+        if route.dirty then
+            -- If a stop was removed from the route we need to reset requested/provided
+            route.requested = {}
+            route.provided = {}
+            route.dirty = false
+        end
+    end
+
+    table.insert(global.route_jobs, {handler="service_requests"})
+end
+
+
+function tasks.update_reqprov(task)
+    -- Update reqprov from newvalues
+    local routename = task.routename
+
+    for stopnum, x in pairs(get_route_stops(routename)) do
+        remove_value_from_reqprov(routename, stopnum, global.values[stopnum])
+        add_value_to_reqprov(routename, stopnum, global.newvalues[stopnum])
+    end
+
+    log("Requested: " .. fstr(routename) .. " " .. fstr(global.routes[routename].requested))
+    log("Provided: " .. fstr(routename) .. " " .. fstr(global.routes[routename].provided))
+end
+
+
+function process_routes()
     local task = global.route_jobs[global.route_index]
     global.route_index = global.route_index + 1
     if task == nil then
         -- Reset and start a new pass
         global.route_index = 1
         global.route_jobs = {}
-        table.insert(global.route_jobs, {handler="A"})
-        global.values = global.newvalues
-        global.newvalues = {}
-
-        log("Values: " .. fstr(global.values))
-
-        service_requests()
-    elseif task.handler == "A" then
-        -- Make a copy of global.stopchests but in a dense array form
-        for stopnum, x in pairs(global.stopchests) do
-            table.insert(global.route_jobs, {handler="B", stopnum=stopnum})
-        end
-        table.insert(global.route_jobs, {handler="C"})
-    elseif task.handler == "B" then
-        -- Calculate values for each stop
-        global.newvalues[task.stopnum] = calculate_value_for_stop(task.stopnum)
-    elseif task.handler == "C" then
-        -- Make a copy of global.routes but in a dense array form
-        for routename, route in pairs(global.routes) do
-            table.insert(global.route_jobs, {handler="D", routename=routename})
-
-            if route.dirty then
-                -- If a stop was removed from the route we need to reset requested/provided
-                route.requested = {}
-                route.provided = {}
-                route.dirty = false
-            end
-        end
-    elseif task.handler == "D" then
-        -- Update reqprov from newvalues
-        local routename = task.routename
-
-        for stopnum, x in pairs(get_route_stops(routename)) do
-            remove_value_from_reqprov(routename, stopnum, global.values[stopnum])
-            add_value_to_reqprov(routename, stopnum, global.newvalues[stopnum])
-        end
-
-        log("Requested: " .. fstr(routename) .. " " .. fstr(global.routes[routename].requested))
-        log("Provided: " .. fstr(routename) .. " " .. fstr(global.routes[routename].provided))
+        table.insert(global.route_jobs, {handler="copy_stopchests"})
     else
-        error("Unexpected task handler")
+        tasks[task.handler](task)
     end
 end
 
@@ -209,7 +211,13 @@ function calc_provider_weight(reqstopnum, provstopnum, itemname, wanted, have)
 end
 
 
-function service_requests()
+function tasks.service_requests()
+    -- Updating finished
+    global.values = global.newvalues
+    global.newvalues = {}
+
+    log("Values: " .. fstr(global.values))
+
     -- Loop through requests and see if something is in provided
     for routename, route in pairs(global.routes) do
         for itemname, stops in pairs(global.routes[routename].requested) do
