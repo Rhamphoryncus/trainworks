@@ -1,16 +1,53 @@
 -- Loading of trains and managing stops
 
 
+function train_is_idling(train)
+    if not train.valid then
+        return false
+    end
+
+    if train.state ~= defines.train_state.wait_station
+            or train.station == nil
+            or train.station.prototype.name ~= "tw_depot"
+            then
+        return false
+    end
+
+    if global.train_idle[train.id] > game.tick - 120 then
+        return false
+    end
+
+    for x, loco in pairs(train.locomotives.front_movers) do
+        local inv = loco.get_inventory(defines.inventory.fuel)
+        local empty = inv.count_empty_stacks{include_filtered=true}
+        if empty > 0 then
+            return false
+        end
+    end
+
+    for x, loco in pairs(train.locomotives.back_movers) do
+        local inv = loco.get_inventory(defines.inventory.fuel)
+        local empty = inv.count_empty_stacks{include_filtered=true}
+        if empty > 0 then
+            return false
+        end
+    end
+
+    for x, wagon in pairs(train.cargo_wagons) do
+        local inv = wagon.get_inventory(defines.inventory.cargo_wagon)
+        if not inv.is_empty() then
+            return false
+        end
+    end
+
+    return true
+end
+
+
 function dispatch_train(routename, sourcenum, destnum, actions)
     local train = nil
     for maybetrainid, maybetrain in pairs(global.routes[routename].trains) do
-        if maybetrain.valid
-                and maybetrain.state == defines.train_state.wait_station
-                and maybetrain.station ~= nil
-                and maybetrain.station.prototype.name == "tw_depot"
-                and global.train_idle[maybetrain.id] <= game.tick - 120
-                -- XXX FIXME should also check that there are no empty fuel slots and that all wagon inventories are empty
-                then
+        if train_is_idling(maybetrain) then
             train = maybetrain
             break
         end
