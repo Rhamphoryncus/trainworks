@@ -18,9 +18,33 @@ function merge_combinator_signals(combi)
 end
 
 
+function merge_stop_signals(stopnum)
+    local output = {}
+    local stop = global.stopchests[stopnum].stop
+    local signals = stop.get_merged_signals() or {}
+
+    for j, sig in pairs(signals) do
+        if sig.signal.type == "item" and sig.signal.name then
+            output[sig.signal.name] = sig
+        end
+    end
+        
+    return output
+end
+
+
 function calculate_value_for_stop(stopnum)
     local value = {}
     local chests = global.stopchests[stopnum].chests
+
+    -- Add signals to value
+    local stopsignals = merge_stop_signals(stopnum)
+    for itemname, sig in pairs(stopsignals) do
+        if value[itemname] == nil then
+            value[itemname] = {have=0, want=0, pickup=0, dropoff=0}
+        end
+        value[itemname].want = value[itemname].want + sig.count
+    end
 
     for i, chest in pairs(chests) do
         if not chest.valid then
@@ -31,7 +55,6 @@ function calculate_value_for_stop(stopnum)
         local signals = merge_combinator_signals(combi)
         local inv = chest.get_inventory(defines.inventory.chest).get_contents()
 
-        -- XXX FIXME does not account for actions (pending trains)
         -- Add inventory to value
         for itemname, amount in pairs(inv) do
             if value[itemname] == nil then
@@ -49,6 +72,7 @@ function calculate_value_for_stop(stopnum)
         end
     end
 
+    -- Add pending trains
     for trainid, x in pairs(global.stop_actions[stopnum]) do
         for itemname, amount in pairs(x.actions) do
             if value[itemname] == nil then
@@ -172,6 +196,7 @@ function process_routes()
         global.route_jobs = {}
         table.insert(global.route_jobs, {handler="copy_stopchests"})
     else
+        --mod_gui.get_button_flow(game.players[1]).trainworks_top_button.caption = task.handler
         tasks[task.handler](task)
     end
 end

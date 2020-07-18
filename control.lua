@@ -57,6 +57,8 @@ script.on_event({defines.events.on_built_entity},
             global.routes[e.created_entity.backer_name] = {depots={}, trains={}, stops={}, provided={}, requested={}}
             global.universal_routes[e.created_entity.backer_name] = true
         elseif e.created_entity.name == "tw_stop" then
+            local control = e.created_entity.get_or_create_control_behavior()
+            control.send_to_train = false
             find_stop_chests(e.created_entity)
         elseif e.created_entity.name == "locomotive" then
         elseif e.created_entity.name == "tw_chest" then
