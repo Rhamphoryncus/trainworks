@@ -3,6 +3,7 @@
 -- Add profiling hooks
 -- Replace routename with routenum
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
+-- Don't mark trains as available in the depot until after fuel loading
 
 
 require("scripts.util")
@@ -13,11 +14,11 @@ require("scripts.gui")
 
 script.on_init(function()
     global.stopchests = {}  -- stopnum -> {stop, chests, last_activity}  -- The chests belonging to each stop
-    global.combinators = {}  -- chestnum -> combi  -- Combinators containing request amounts for each chest
     global.train_actions = {}  -- trainid -> {source, dest, actions}  -- Trains in progress
         -- actions is itemname -> amount
     global.stop_actions = {}  -- stopnum -> trainid -> {actions, pickup}  -- Actions pending for each stop
         -- actions is itemname -> amount
+    global.train_idle = {}  -- trainid -> tick  -- Time the train started to become idle
     global.values = {}  -- stopnum -> itemname -> {have, want, coming}  -- Previous pass's values
     global.newvalues = {}  -- stopnum -> itemname -> {have, want, coming}  -- Current pass's values
     global.routes = {}  -- routename -> {depots, trains, stops, provided, requested}

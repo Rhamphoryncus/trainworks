@@ -4,6 +4,9 @@
 function merge_stop_signals(stopnum)
     local output = {}
     local stop = global.stopchests[stopnum].stop
+    if not stop.valid then
+        return {}
+    end
     local signals = stop.get_merged_signals() or {}
 
     for j, sig in pairs(signals) do
@@ -155,8 +158,8 @@ function tasks.update_reqprov(task)
         add_value_to_reqprov(routename, stopnum, global.newvalues[stopnum])
     end
 
-    log("Requested: " .. fstr(routename) .. " " .. fstr(global.routes[routename].requested))
-    log("Provided: " .. fstr(routename) .. " " .. fstr(global.routes[routename].provided))
+    --log("Requested: " .. fstr(routename) .. " " .. fstr(global.routes[routename].requested))
+    --log("Provided: " .. fstr(routename) .. " " .. fstr(global.routes[routename].provided))
 end
 
 
@@ -220,7 +223,7 @@ function tasks.copy_service_routes(task)
     global.values = global.newvalues
     global.newvalues = {}
 
-    log("Values: " .. fstr(global.values))
+    --log("Values: " .. fstr(global.values))
 
     -- Make a copy of global.routes but in a dense array form
     for routename, route in pairs(global.routes) do

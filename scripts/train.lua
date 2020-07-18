@@ -4,7 +4,13 @@
 function dispatch_train(routename, sourcenum, destnum, actions)
     local train = nil
     for maybetrainid, maybetrain in pairs(global.routes[routename].trains) do
-        if maybetrain.valid and maybetrain.state == defines.train_state.wait_station and maybetrain.station ~= nil and maybetrain.station.prototype.name == "tw_depot" then
+        if maybetrain.valid
+                and maybetrain.state == defines.train_state.wait_station
+                and maybetrain.station ~= nil
+                and maybetrain.station.prototype.name == "tw_depot"
+                and global.train_idle[maybetrain.id] <= game.tick - 120
+                -- XXX FIXME should also check that there are no empty fuel slots and that all wagon inventories are empty
+                then
             train = maybetrain
             break
         end
@@ -31,6 +37,7 @@ function dispatch_train(routename, sourcenum, destnum, actions)
     }
     train.schedule = x
 
+    global.train_idle[train.id] = nil
     global.train_actions[train.id] = {src=source, dest=dest, actions=actions}
     global.stop_actions[source.unit_number][train.id] = {actions=actions, pickup=true}
     global.stop_actions[dest.unit_number][train.id] = {actions=actions, pickup=false}
@@ -47,6 +54,8 @@ function reset_train(train)
         }
     }
     train.schedule = x
+
+    global.train_idle[train.id] = game.tick
 end
 
 function extract_inventories(invs, itemname, amount)
