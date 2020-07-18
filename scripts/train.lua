@@ -240,11 +240,6 @@ function register_chest(chest)
     local left = chest.surface.find_entities_filtered{type="container", position=leftpos}
     local right = chest.surface.find_entities_filtered{type="container", position=rightpos}
 
-    -- XXX create a combinator
-    local combi = chest.surface.create_entity{name="constant-combinator", position=chest.position, force=chest.force}
-    global.combinators[chest.unit_number] = combi
-    log("Test2: " .. fstr(global.combinators) .. "[" .. fstr(chest) .. "] -> " .. fstr(global.combinators[chest.unit_number]))
-
     local stop1 = search_for_stop(chest.surface, chest.position, defines.direction.east)
     local stop2 = search_for_stop(chest.surface, chest.position, defines.direction.west)
     log("searched: " .. fstr(stop1) .. ", " .. fstr(stop2))

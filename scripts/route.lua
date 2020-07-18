@@ -1,23 +1,6 @@
 -- Deciding when and where to send trains
 
 
-function merge_combinator_signals(combi)
-    local output = {}
-    local signals = combi.get_merged_signals() or combi.get_control_behavior().parameters.parameters or {}
---    log("Signals: " .. fstr(signals))
-
-    for j, sig in pairs(signals) do
---        log("V: " .. fstr(j) .. ", " .. fstr(sig))
-        if sig.signal.type == "item" and sig.signal.name then
-            output[sig.signal.name] = sig
-        end
-    end
-
---    log("Output: " .. fstr(output))
-    return output
-end
-
-
 function merge_stop_signals(stopnum)
     local output = {}
     local stop = global.stopchests[stopnum].stop
@@ -51,8 +34,6 @@ function calculate_value_for_stop(stopnum)
             return nil
         end
 
-        local combi = global.combinators[chest.unit_number]
-        local signals = merge_combinator_signals(combi)
         local inv = chest.get_inventory(defines.inventory.chest).get_contents()
 
         -- Add inventory to value
@@ -62,17 +43,9 @@ function calculate_value_for_stop(stopnum)
             end
             value[itemname].have = value[itemname].have + amount
         end
-
-        -- Add signals to value
-        for itemname, sig in pairs(signals) do
-            if value[itemname] == nil then
-                value[itemname] = {have=0, want=0, pickup=0, dropoff=0}
-            end
-            value[itemname].want = value[itemname].want + sig.count
-        end
     end
 
-    -- Add pending trains
+    -- Add pending trains to value
     for trainid, x in pairs(global.stop_actions[stopnum]) do
         for itemname, amount in pairs(x.actions) do
             if value[itemname] == nil then
