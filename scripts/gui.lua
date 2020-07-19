@@ -79,7 +79,7 @@ function populate_route_list(playernum)
     local pane = frame.add{type="scroll-pane", name="trainworks_routepane", vertical_scroll_policy="auto-and-reserve-space"}
     local flow = pane.add{type="flow", name="trainworks_routeflow", direction="vertical"}
     for routename, route in pairs(global.routes) do
-        flow.add{type="button", name=("trainworks_route_"..routename), caption=routename}
+        flow.add{type="button", name=("trainworks_route_"..routename), caption=route.name}
     end
     frame.visible = true
 end
@@ -298,7 +298,8 @@ script.on_event({defines.events.on_gui_click},
                 populate_route_list(e.player_index)
             end
         elseif e.element.name:match("^trainworks_route_") then
-            local routename = e.element.caption
+            --local routename = e.element.caption
+            local routename = tonumber(e.element.name:match("^trainworks_route_(.*)$"))
             global.gui_selected_route[e.player_index] = routename  -- Cache it for later
             log("Bah "..routename)
             local frame = mod_gui.get_frame_flow(player).trainworks_status

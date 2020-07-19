@@ -3,7 +3,9 @@
 -- Add profiling hooks
 -- Replace routename with routenum
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
--- Don't mark trains as available in the depot until after fuel loading
+-- Add vertical chests
+-- Allow chests on both sides of the track
+-- Balance chest contents when unloading
 
 
 require("scripts.util")
@@ -21,13 +23,15 @@ script.on_init(function()
     global.train_idle = {}  -- trainid -> tick  -- Time the train started to become idle
     global.values = {}  -- stopnum -> itemname -> {have, want, coming}  -- Previous pass's values
     global.newvalues = {}  -- stopnum -> itemname -> {have, want, coming}  -- Current pass's values
-    global.routes = {}  -- routename -> {depots, trains, stops, provided, requested}
-        -- depots is stopnum -> true
+    global.routes = {}  -- routename -> {name, trains, stops, provided, requested}
+        -- name is string
         -- trains is trainid -> true
         -- stops is stopnum -> true
         -- provided is itemname -> stopnum -> amount
         -- requested is itemname -> stopnum -> amount
     global.universal_routes = {}  -- routename -> true
+    global.route_counter = 1  -- Index for new routes.  Perpetually increasing
+    global.route_map = {}  -- routename -> routemap  -- reverse mapping of depot/route name to routenum
 
     global.gui_selected_route = {}  -- playernum -> routename
     global.gui_players = {}  -- playernum -> true
@@ -55,8 +59,11 @@ script.on_event({defines.events.on_built_entity},
         log("Built " .. e.created_entity.name)
         if e.created_entity.name == "tw_depot" then
             -- XXX temporary bodge until I have a proper GUI
-            global.routes[e.created_entity.backer_name] = {depots={}, trains={}, stops={}, provided={}, requested={}}
-            global.universal_routes[e.created_entity.backer_name] = true
+            local routenum = global.route_counter
+            global.route_counter = global.route_counter + 1
+            global.routes[routenum] = {name=e.created_entity.backer_name, trains={}, stops={}, provided={}, requested={}}
+            global.route_map[e.created_entity.backer_name] = routenum
+            global.universal_routes[routenum] = true
         elseif e.created_entity.name == "tw_stop" then
             local control = e.created_entity.get_or_create_control_behavior()
             control.send_to_train = false

@@ -82,7 +82,8 @@ function dispatch_train(routename, sourcenum, destnum, actions)
 end
 
 function reset_train(train)
-    global.routes[train.station.backer_name].trains[train.id] = train
+    local routenum = global.route_map[train.station.backer_name]
+    global.routes[routenum].trains[train.id] = train
 
     local x = {
         current=1,
