@@ -44,9 +44,9 @@ function train_is_idling(train)
 end
 
 
-function dispatch_train(routename, sourcenum, destnum, actions)
+function dispatch_train(routenum, sourcenum, destnum, actions)
     local train = nil
-    for maybetrainid, maybetrain in pairs(global.routes[routename].trains) do
+    for maybetrainid, maybetrain in pairs(global.routes[routenum].trains) do
         if train_is_idling(maybetrain) then
             train = maybetrain
             break

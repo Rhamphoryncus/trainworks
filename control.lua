@@ -23,17 +23,17 @@ script.on_init(function()
     global.train_idle = {}  -- trainid -> tick  -- Time the train started to become idle
     global.values = {}  -- stopnum -> itemname -> {have, want, coming}  -- Previous pass's values
     global.newvalues = {}  -- stopnum -> itemname -> {have, want, coming}  -- Current pass's values
-    global.routes = {}  -- routename -> {name, trains, stops, provided, requested}
+    global.routes = {}  -- routenum -> {name, trains, stops, provided, requested}
         -- name is string
         -- trains is trainid -> true
         -- stops is stopnum -> true
         -- provided is itemname -> stopnum -> amount
         -- requested is itemname -> stopnum -> amount
-    global.universal_routes = {}  -- routename -> true
+    global.universal_routes = {}  -- routenum -> true
     global.route_counter = 1  -- Index for new routes.  Perpetually increasing
-    global.route_map = {}  -- routename -> routemap  -- reverse mapping of depot/route name to routenum
+    global.route_map = {}  -- routename -> routenum  -- reverse mapping of depot/route name to routenum
 
-    global.gui_selected_route = {}  -- playernum -> routename
+    global.gui_selected_route = {}  -- playernum -> routenum
     global.gui_players = {}  -- playernum -> true
     global.gui_routestatus = {}  -- playernum -> guielement
     global.gui_routemodify = {}  -- playernum -> guielement

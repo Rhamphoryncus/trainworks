@@ -66,9 +66,9 @@ function calculate_value_for_stop(stopnum)
 end
 
 
-function add_value_to_reqprov(routename, stopnum, value)
-    local requested = global.routes[routename].requested
-    local provided = global.routes[routename].provided
+function add_value_to_reqprov(routenum, stopnum, value)
+    local requested = global.routes[routenum].requested
+    local provided = global.routes[routenum].provided
 
     if value == nil then
         return
@@ -95,9 +95,9 @@ function add_value_to_reqprov(routename, stopnum, value)
 end
 
 
-function remove_value_from_reqprov(routename, stopnum, value)
-    local requested = global.routes[routename].requested
-    local provided = global.routes[routename].provided
+function remove_value_from_reqprov(routenum, stopnum, value)
+    local requested = global.routes[routenum].requested
+    local provided = global.routes[routenum].provided
 
     if value == nil then
         return
@@ -134,8 +134,8 @@ end
 
 function tasks.copy_reqprov_routes(task)
     -- Make a copy of global.routes but in a dense array form
-    for routename, route in pairs(global.routes) do
-        table.insert(global.route_jobs, {handler="update_reqprov", routename=routename})
+    for routenum, route in pairs(global.routes) do
+        table.insert(global.route_jobs, {handler="update_reqprov", routenum=routenum})
 
         if route.dirty then
             -- If a stop was removed from the route we need to reset requested/provided
@@ -151,15 +151,15 @@ end
 
 function tasks.update_reqprov(task)
     -- Update reqprov from newvalues
-    local routename = task.routename
+    local routenum = task.routenum
 
-    for stopnum, x in pairs(get_route_stops(routename)) do
-        remove_value_from_reqprov(routename, stopnum, global.values[stopnum])
-        add_value_to_reqprov(routename, stopnum, global.newvalues[stopnum])
+    for stopnum, x in pairs(get_route_stops(routenum)) do
+        remove_value_from_reqprov(routenum, stopnum, global.values[stopnum])
+        add_value_to_reqprov(routenum, stopnum, global.newvalues[stopnum])
     end
 
-    --log("Requested: " .. fstr(routename) .. " " .. fstr(global.routes[routename].requested))
-    --log("Provided: " .. fstr(routename) .. " " .. fstr(global.routes[routename].provided))
+    --log("Requested: " .. fstr(routenum) .. " " .. fstr(global.routes[routenum].requested))
+    --log("Provided: " .. fstr(routenum) .. " " .. fstr(global.routes[routenum].provided))
 end
 
 
@@ -178,12 +178,12 @@ function process_routes()
 end
 
 
-function get_route_stops(routename)
+function get_route_stops(routenum)
     -- XXX The return signature here varies.  The key is the same either way, stopnum, but the value can either be 'true' or be a table
-    if global.universal_routes[routename] then
+    if global.universal_routes[routenum] then
         return global.stopchests
     else
-        return global.routes[routename].stops
+        return global.routes[routenum].stops
     end
 end
 
@@ -226,20 +226,20 @@ function tasks.copy_service_routes(task)
     --log("Values: " .. fstr(global.values))
 
     -- Make a copy of global.routes but in a dense array form
-    for routename, route in pairs(global.routes) do
-        table.insert(global.route_jobs, {handler="service_route_requests", routename=routename})
+    for routenum, route in pairs(global.routes) do
+        table.insert(global.route_jobs, {handler="service_route_requests", routenum=routenum})
     end
 end
 
 
 function tasks.service_route_requests(task)
     -- Loop through requested items and see if something is in provided
-    local routename = task.routename
+    local routenum = task.routenum
 
-    for itemname, stops in pairs(global.routes[routename].requested) do
+    for itemname, stops in pairs(global.routes[routenum].requested) do
         for stopnum, amount in pairs(stops) do
             -- XXX cap wanted amount by train size
-            local pstops = global.routes[routename].provided[itemname]
+            local pstops = global.routes[routenum].provided[itemname]
             if pstops ~= nil then
                 local bestweight = -100  -- Doubles as a threshold for having no good providers
                 local beststopnum = nil
@@ -258,7 +258,7 @@ function tasks.service_route_requests(task)
                     local actions = {}
                     actions[itemname] = math.min(amount, bestamount)
                     log("Min2: " .. fstr(actions))
-                    dispatch_train(routename, beststopnum, stopnum, actions)
+                    dispatch_train(routenum, beststopnum, stopnum, actions)
                 end
             end
         end
