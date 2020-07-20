@@ -83,6 +83,12 @@ end
 
 function reset_train(train)
     local routenum = global.route_map[train.station.backer_name]
+    if routenum == nil then
+        -- Train is orphaned.  Route was renamed or deleted.
+        train.schedule = nil
+        return
+    end
+
     global.routes[routenum].trains[train.id] = train
 
     local x = {
@@ -302,3 +308,11 @@ function register_chest(chest)
         find_stop_chests(stop2)
     end
 end
+
+
+script.on_event({defines.events.on_entity_renamed},
+    function (e)
+        log("Entity renamed")
+        -- XXX FIXME This should pull in trains idling here with an empty or 1 station schedule, if the new station name matches a route
+    end
+)

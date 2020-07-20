@@ -349,8 +349,18 @@ script.on_event({defines.events.on_gui_text_changed},
 
 
 function rename_route(routenum, text)
+    local oldname = global.routes[routenum].name
+    if global.route_map[text] ~= nil then
+        game.print("Can't rename route " .. oldname .. " to " .. text .. ", already exists!")
+        return
+    end
     log("Renaming route " .. fstr(routenum) .. " to " .. fstr(text))
+    global.route_map[oldname] = nil
     global.routes[routenum].name = text
+    global.route_map[text] = routenum
+
+    -- Forget all the trains that were associated with the old name
+    global.routes[routenum].trains = {}
 
     -- XXX FIXME rename route label of all players
     for playernum, player in pairs(game.players) do
