@@ -82,12 +82,14 @@ function populate_route_list(playernum)
         flow.add{type="button", name=("trainworks_route_"..routenum), caption=route.name}
     end
     frame.visible = true
+    global.gui_routelist[playernum] = pane
 end
 
 function clear_route_list(playernum)
     local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_frame
     frame.visible = false
     frame.clear()
+    global.gui_routelist[playernum] = nil
 end
 
 
@@ -117,6 +119,7 @@ end
 function populate_modify(playernum, routenum)
     local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_modify
     local flow = frame.add{type="flow", name="trainworks_modifyflow", direction="vertical"}
+    flow.add{type="textfield", name="trainworks_modifyname", text=global.routes[routenum].name}
     local universalcaption = "Make universal"
     if global.universal_routes[routenum] then
         universalcaption = "Undo universal"
@@ -333,6 +336,38 @@ script.on_event({defines.events.on_gui_click},
             else
                 activate_universal(routenum)
             end
+        end
+    end
+)
+
+
+script.on_event({defines.events.on_gui_text_changed},
+    function (e)
+        log("Text changed by " .. fstr(e.player_index) .. ": " .. fstr(e.element.text))
+    end
+)
+
+
+function rename_route(routenum, text)
+    log("Renaming route " .. fstr(routenum) .. " to " .. fstr(text))
+    global.routes[routenum].name = text
+
+    -- XXX FIXME rename route label of all players
+    for playernum, player in pairs(game.players) do
+        -- Remove from status window
+        local listpane = global.gui_routelist[playernum]
+        if listpane ~= nil then
+            local routelabel = listpane.trainworks_routeflow[("trainworks_route_"..routenum)]
+            routelabel.caption = text
+        end
+    end
+end
+
+
+script.on_event({defines.events.on_gui_confirmed},
+    function (e)
+        if e.element.name == "trainworks_modifyname" then
+            rename_route(global.gui_selected_route[e.player_index], e.element.text)
         end
     end
 )

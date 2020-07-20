@@ -1,11 +1,13 @@
 -- Todo:
 -- Handle destruction of entities.  Probably just .valid checks and add them to a global "delete me" table to be processed later?
 -- Add profiling hooks
--- Replace routename with routenum
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
 -- Add vertical chests
 -- Allow chests on both sides of the track
 -- Balance chest contents when unloading
+-- Allow renaming of routes
+-- Switch route selection to radiobox
+-- Switch station adding/removing to radiobox
 
 
 require("scripts.util")
@@ -35,6 +37,7 @@ script.on_init(function()
 
     global.gui_selected_route = {}  -- playernum -> routenum
     global.gui_players = {}  -- playernum -> true
+    global.gui_routelist = {}  -- playernum -> guielement
     global.gui_routestatus = {}  -- playernum -> guielement
     global.gui_routemodify = {}  -- playernum -> guielement
 
