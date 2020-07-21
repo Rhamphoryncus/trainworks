@@ -79,7 +79,7 @@ function populate_route_list(playernum)
     local pane = frame.add{type="scroll-pane", name="trainworks_routepane", vertical_scroll_policy="auto-and-reserve-space"}
     local flow = pane.add{type="flow", name="trainworks_routeflow", direction="vertical"}
     for routenum, route in pairs(global.routes) do
-        flow.add{type="button", name=("trainworks_route_"..routenum), caption=route.name}
+        flow.add{type="radiobutton", name=("trainworks_route_"..routenum), state=false, caption=route.name}
     end
     frame.visible = true
     global.gui_routelist[playernum] = pane
@@ -90,6 +90,23 @@ function clear_route_list(playernum)
     frame.visible = false
     frame.clear()
     global.gui_routelist[playernum] = nil
+end
+
+function select_route(playernum, routenum)
+    -- Unset all the radiobuttons
+    local flow = mod_gui.get_frame_flow(game.players[playernum]).trainworks_frame.trainworks_routepane.trainworks_routeflow
+    for childname, child in pairs(flow.children) do
+        child.state = false
+    end
+
+    -- Hide and reshow the route status pane
+    global.gui_selected_route[playernum] = routenum  -- Cache it for later
+    clear_routestatus(playernum)
+    clear_modify(playernum)
+    populate_routestatus(playernum, routenum)
+
+    -- Reset the active radiobutton
+    flow[("trainworks_route_"..routenum)].state = true
 end
 
 
@@ -302,15 +319,7 @@ script.on_event({defines.events.on_gui_click},
             end
         elseif e.element.name:match("^trainworks_route_") then
             local routenum = tonumber(e.element.name:match("^trainworks_route_(.*)$"))
-            global.gui_selected_route[e.player_index] = routenum  -- Cache it for later
-            log("Bah "..routenum)
-            local frame = mod_gui.get_frame_flow(player).trainworks_status
-            if frame.visible then
-                clear_routestatus(e.player_index)
-                clear_modify(e.player_index)
-            else
-                populate_routestatus(e.player_index, routenum)
-            end
+            select_route(e.player_index, routenum)
         elseif e.element.name == "trainworks_showmodify" then
             local routenum = global.gui_selected_route[e.player_index]
             local frame = mod_gui.get_frame_flow(player).trainworks_modify
@@ -362,9 +371,7 @@ function rename_route(routenum, text)
     -- Forget all the trains that were associated with the old name
     global.routes[routenum].trains = {}
 
-    -- XXX FIXME rename route label of all players
     for playernum, player in pairs(game.players) do
-        -- Remove from status window
         local listpane = global.gui_routelist[playernum]
         if listpane ~= nil then
             local routelabel = listpane.trainworks_routeflow[("trainworks_route_"..routenum)]

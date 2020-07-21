@@ -5,9 +5,8 @@
 -- Add vertical chests
 -- Allow chests on both sides of the track
 -- Balance chest contents when unloading
--- Allow renaming of routes
--- Switch route selection to radiobox
--- Switch station adding/removing to radiobox
+-- Merge route selection and status into one window
+-- Switch station adding/removing to checkbox
 
 
 require("scripts.util")
