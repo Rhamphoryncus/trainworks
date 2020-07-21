@@ -16,15 +16,6 @@ function create_gui(player)
     mod_gui.get_frame_flow(player).add
     {
         type="frame",
-        name="trainworks_frame",
-        caption="Routes",
-        style=mod_gui.frame_style
-    }
-    mod_gui.get_frame_flow(player).trainworks_frame.visible = false
-
-    mod_gui.get_frame_flow(player).add
-    {
-        type="frame",
         name="trainworks_status",
         caption="Status",
         style=mod_gui.frame_style
@@ -74,18 +65,32 @@ function get_backer_name(stopnum)
 end
 
 
-function populate_route_list(playernum)
-    local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_frame
-    local pane = frame.add{type="scroll-pane", name="trainworks_routepane", vertical_scroll_policy="auto-and-reserve-space"}
+function populate_status(playernum)
+    local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status
+
+    -- List of routes to select from
+    local routepane = frame.add{type="scroll-pane", name="trainworks_routepane", vertical_scroll_policy="auto-and-reserve-space"}
+    local first = nil
     for routenum, route in pairs(global.routes) do
-        pane.add{type="radiobutton", name=("trainworks_route_"..routenum), state=false, caption=route.name}
+        routepane.add{type="radiobutton", name=("trainworks_route_"..routenum), state=(not first), caption=route.name}
+        if first == nil then
+            first = routenum
+        end
     end
+
+    -- Stops within the selected route
+    local flow = frame.add{type="flow", name="trainworks_stationflow", direction="vertical"}
+    flow.add{type="button", name="trainworks_showmodify", caption="Modify"}
+    local statuspane = flow.add{type="scroll-pane", name="trainworks_stationpane", vertical_scroll_policy="auto-and-reserve-space"}
+    global.gui_routestatus[playernum] = statuspane
+    populate_stops_in_route(playernum, first)
+
     frame.visible = true
-    global.gui_routelist[playernum] = pane
+    global.gui_routelist[playernum] = routepane
 end
 
-function clear_route_list(playernum)
-    local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_frame
+function clear_status(playernum)
+    local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status
     frame.visible = false
     frame.clear()
     global.gui_routelist[playernum] = nil
@@ -93,42 +98,31 @@ end
 
 function select_route(playernum, routenum)
     -- Unset all the radiobuttons
-    local pane = mod_gui.get_frame_flow(game.players[playernum]).trainworks_frame.trainworks_routepane
+    local pane = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status.trainworks_routepane
     for childname, child in pairs(pane.children) do
         child.state = false
     end
 
     -- Hide and reshow the route status pane
     global.gui_selected_route[playernum] = routenum  -- Cache it for later
-    clear_routestatus(playernum)
     clear_modify(playernum)
-    populate_routestatus(playernum, routenum)
+    populate_stops_in_route(playernum, routenum)
 
     -- Reset the active radiobutton
     pane[("trainworks_route_"..routenum)].state = true
 end
 
+function populate_stops_in_route(playernum, routenum)
+    local pane = global.gui_routestatus[playernum]
 
-function populate_routestatus(playernum, routenum)
-    local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status
-    local flow = frame.add{type="flow", name="trainworks_stationflow", direction="vertical"}
-    -- Top buttons
-    flow.add{type="button", name="trainworks_showmodify", caption="Modify"}
-    -- List of stops
-    local pane = flow.add{type="scroll-pane", name="trainworks_stationpane", vertical_scroll_policy="auto-and-reserve-space"}
-    for stopnum, x in pairs(get_route_stops(routenum)) do
-        local name = "label_"..tostring(stopnum)
-        pane.add{type="label", name=name, caption=get_backer_name(stopnum)}
+    pane.clear()
+
+    if routenum ~= nil then
+        for stopnum, x in pairs(get_route_stops(routenum)) do
+            local name = "label_"..tostring(stopnum)
+            pane.add{type="label", name=name, caption=get_backer_name(stopnum)}
+        end
     end
-    frame.visible = true
-    global.gui_routestatus[playernum] = pane
-end
-
-function clear_routestatus(playernum)
-    local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status
-    frame.visible = false
-    frame.clear()
-    global.gui_routestatus[playernum] = nil
 end
 
 
@@ -258,8 +252,7 @@ function activate_universal(routenum)
 
     for playernum, player in pairs(game.players) do
         -- Update the route status window
-        clear_routestatus(playernum)
-        populate_routestatus(playernum, routenum)
+        populate_stops_in_route(playernum, routenum)
 
         -- Update the route modify window
         local modifypane = global.gui_routemodify[playernum]
@@ -284,8 +277,7 @@ function deactivate_universal(routenum)
 
     for playernum, player in pairs(game.players) do
         -- Update the route status window
-        clear_routestatus(playernum)
-        populate_routestatus(playernum, routenum)
+        populate_stops_in_route(playernum, routenum)
 
         -- Update the route modify window
         local modifypane = global.gui_routemodify[playernum]
@@ -309,12 +301,11 @@ script.on_event({defines.events.on_gui_click},
         local player = game.players[e.player_index]
         if e.element.name == "trainworks_top_button" then
             local frame = mod_gui.get_frame_flow(player)
-            if frame.trainworks_frame.visible then
-                clear_route_list(e.player_index)
-                clear_routestatus(e.player_index)
+            if frame.trainworks_status.visible then
+                clear_status(e.player_index)
                 clear_modify(e.player_index)
             else
-                populate_route_list(e.player_index)
+                populate_status(e.player_index)
             end
         elseif e.element.name:match("^trainworks_route_") then
             local routenum = tonumber(e.element.name:match("^trainworks_route_(.*)$"))
@@ -325,7 +316,9 @@ script.on_event({defines.events.on_gui_click},
             if frame.visible then
                 clear_modify(e.player_index)
             else
-                populate_modify(e.player_index, routenum)
+                if routenum ~= nil then
+                    populate_modify(e.player_index, routenum)
+                end
             end
         elseif e.element.name:match("^trainworks_add_") then
             local routenum = global.gui_selected_route[e.player_index]

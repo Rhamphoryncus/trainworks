@@ -7,6 +7,7 @@
 -- Balance chest contents when unloading
 -- Merge route selection and status into one window
 -- Switch station adding/removing to checkbox
+-- Clear GUI when a user disconnects
 
 
 require("scripts.util")
