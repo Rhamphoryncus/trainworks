@@ -5,7 +5,6 @@
 -- Add vertical chests
 -- Allow chests on both sides of the track
 -- Balance chest contents when unloading
--- Merge route selection and status into one window
 -- Switch station adding/removing to checkbox
 -- Clear GUI when a user disconnects
 
@@ -32,6 +31,7 @@ script.on_init(function()
         -- stops is stopnum -> true
         -- provided is itemname -> stopnum -> amount
         -- requested is itemname -> stopnum -> amount
+        -- dirty is true/nil  -- Indicates a route that had stops removed and the reqprov needs resetting
     global.universal_routes = {}  -- routenum -> true
     global.route_counter = 1  -- Index for new routes.  Perpetually increasing
     global.route_map = {}  -- routename -> routenum  -- reverse mapping of depot/route name to routenum
