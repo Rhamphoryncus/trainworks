@@ -22,12 +22,13 @@ script.on_init(function()
         -- actions is itemname -> amount
     global.stop_actions = {}  -- stopnum -> trainid -> {actions, pickup}  -- Actions pending for each stop
         -- actions is itemname -> amount
-    global.train_idle = {}  -- trainid -> tick  -- Time the train started to become idle
+    global.train_lastactivity = {}  -- trainid -> tick  -- Time the train started to become idle
+    global.stop_idletrain = {}  -- stopnum -> train  -- Train idling at each stop
     global.values = {}  -- stopnum -> itemname -> {have, want, coming}  -- Previous pass's values
     global.newvalues = {}  -- stopnum -> itemname -> {have, want, coming}  -- Current pass's values
     global.routes = {}  -- routenum -> {name, trains, stops, provided, requested}
         -- name is string
-        -- trains is trainid -> true
+        -- trains is trainid -> train
         -- stops is stopnum -> true
         -- provided is itemname -> stopnum -> amount
         -- requested is itemname -> stopnum -> amount

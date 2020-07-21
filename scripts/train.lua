@@ -13,7 +13,7 @@ function train_is_idling(train)
         return false
     end
 
-    if global.train_idle[train.id] > game.tick - 120 then
+    if global.train_lastactivity[train.id] > game.tick - 120 then
         return false
     end
 
@@ -58,6 +58,8 @@ function dispatch_train(routenum, sourcenum, destnum, actions)
     end
     log("Found depoted train: " .. fstr(train.state) .. " at " .. train.station.backer_name)
 
+    global.stop_idletrain[train.station.unit_number] = nil
+
     local source = global.stopchests[sourcenum].stop
     local dest = global.stopchests[destnum].stop
     if not source.valid or not dest.valid then
@@ -74,7 +76,7 @@ function dispatch_train(routenum, sourcenum, destnum, actions)
     }
     train.schedule = x
 
-    global.train_idle[train.id] = nil
+    global.train_lastactivity[train.id] = nil
     global.train_actions[train.id] = {src=source, dest=dest, actions=actions}
     global.stop_actions[source.unit_number][train.id] = {actions=actions, pickup=true}
     global.stop_actions[dest.unit_number][train.id] = {actions=actions, pickup=false}
@@ -82,6 +84,8 @@ function dispatch_train(routenum, sourcenum, destnum, actions)
 end
 
 function reset_train(train)
+    global.stop_idletrain[train.station.unit_number] = train
+
     local routenum = global.route_map[train.station.backer_name]
     if routenum == nil then
         -- Train is orphaned.  Route was renamed or deleted.
@@ -99,7 +103,7 @@ function reset_train(train)
     }
     train.schedule = x
 
-    global.train_idle[train.id] = game.tick
+    global.train_lastactivity[train.id] = game.tick
 end
 
 function extract_inventories(invs, itemname, amount)
@@ -312,7 +316,17 @@ end
 
 script.on_event({defines.events.on_entity_renamed},
     function (e)
-        log("Entity renamed")
-        -- XXX FIXME This should pull in trains idling here with an empty or 1 station schedule, if the new station name matches a route
+        if e.entity.prototype.name == "tw_depot" then
+            local train = global.stop_idletrain[e.entity.unit_number]
+
+            if train.state == defines.train_state.wait_station and train.station == e.entity then
+                local routenum = global.route_map[e.entity.backer_name]
+                if routenum ~= nil then
+                    global.routes[routenum].trains[train.id] = train
+                end
+            else
+                global.stop_idletrain[e.entity.unit_number] = nil
+            end
+        end
     end
 )
