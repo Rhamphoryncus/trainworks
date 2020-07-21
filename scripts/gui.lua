@@ -77,9 +77,8 @@ end
 function populate_route_list(playernum)
     local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_frame
     local pane = frame.add{type="scroll-pane", name="trainworks_routepane", vertical_scroll_policy="auto-and-reserve-space"}
-    local flow = pane.add{type="flow", name="trainworks_routeflow", direction="vertical"}
     for routenum, route in pairs(global.routes) do
-        flow.add{type="radiobutton", name=("trainworks_route_"..routenum), state=false, caption=route.name}
+        pane.add{type="radiobutton", name=("trainworks_route_"..routenum), state=false, caption=route.name}
     end
     frame.visible = true
     global.gui_routelist[playernum] = pane
@@ -94,8 +93,8 @@ end
 
 function select_route(playernum, routenum)
     -- Unset all the radiobuttons
-    local flow = mod_gui.get_frame_flow(game.players[playernum]).trainworks_frame.trainworks_routepane.trainworks_routeflow
-    for childname, child in pairs(flow.children) do
+    local pane = mod_gui.get_frame_flow(game.players[playernum]).trainworks_frame.trainworks_routepane
+    for childname, child in pairs(pane.children) do
         child.state = false
     end
 
@@ -106,7 +105,7 @@ function select_route(playernum, routenum)
     populate_routestatus(playernum, routenum)
 
     -- Reset the active radiobutton
-    flow[("trainworks_route_"..routenum)].state = true
+    pane[("trainworks_route_"..routenum)].state = true
 end
 
 
@@ -374,7 +373,7 @@ function rename_route(routenum, text)
     for playernum, player in pairs(game.players) do
         local listpane = global.gui_routelist[playernum]
         if listpane ~= nil then
-            local routelabel = listpane.trainworks_routeflow[("trainworks_route_"..routenum)]
+            local routelabel = listpane[("trainworks_route_"..routenum)]
             routelabel.caption = text
         end
     end
