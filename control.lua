@@ -5,7 +5,6 @@
 -- Add vertical chests
 -- Allow chests on both sides of the track
 -- Balance chest contents when unloading
--- Switch station adding/removing to checkbox
 -- Clear GUI when a user disconnects
 
 

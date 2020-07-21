@@ -55,6 +55,15 @@ function gui_initialize_players()
 end
 
 
+-- XXX FIXME this is added blindly.  It's not clear this even is the only event, or even the right even, such as for kicks/bans
+script.on_event({defines.events.on_player_left_game},
+    function (e)
+        clear_status(e.player_index)
+        clear_modify(e.player_index)
+    end
+)
+
+
 function get_backer_name(stopnum)
     local stop = global.stopchests[stopnum].stop
     if stop.valid then
