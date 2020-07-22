@@ -5,7 +5,7 @@
 -- Add vertical chests
 -- Allow chests on both sides of the track
 -- Balance chest contents when unloading
--- Clear GUI when a user disconnects
+-- Consider making depots the first part of a schedule to see if it becomes the default when copy-pasting the schedule
 
 
 require("scripts.util")

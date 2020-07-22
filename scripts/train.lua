@@ -118,7 +118,7 @@ function extract_inventories(invs, itemname, amount)
     return extracted
 end
 
-function insert_inventories(invs, itemname, amount)
+function insert_inventories_unbalanced(invs, itemname, amount)
     -- XXX FIXME should first attempt a balanced insertion
     -- Or maybe that should be a separate function used only on chests, not cargo wagons?
     -- Or maintain balance in the chests, not just the transfer amounts?
@@ -129,6 +129,37 @@ function insert_inventories(invs, itemname, amount)
         end
         inserted = inserted + inv.insert({name=itemname, count=(amount-inserted)})
     end
+    return inserted
+end
+
+function insert_inventories(invs, itemname, amount)
+    -- First pass, find out how much is already stored
+    local found = {}
+    local found_total = 0
+    for i, inv in pairs(invs) do
+        local x = inv.get_item_count(itemname)
+        found[i] = x
+        found_total = found_total + x
+    end
+    local target = math.floor((found_total + amount) / #invs)
+
+    -- Second pass, bring every inventory up to the average (target) amount
+    local inserted = 0
+    for i, inv in pairs(invs) do
+        local count = target - found[i]
+        if count + inserted > amount then
+            count = amount - inserted
+        end
+        if count > 0 then
+            inserted = inserted + inv.insert({name=itemname, count=count})
+        end
+    end
+
+    -- Third pass, squeeze in any remainder anywhere there's space
+    if inserted < amount then
+        inserted = inserted + insert_inventories_unbalanced(invs, itemname, amount-inserted)
+    end
+
     return inserted
 end
 
@@ -319,7 +350,7 @@ script.on_event({defines.events.on_entity_renamed},
         if e.entity.prototype.name == "tw_depot" then
             local train = global.stop_idletrain[e.entity.unit_number]
 
-            if train.state == defines.train_state.wait_station and train.station == e.entity then
+            if train ~= nil and train.state == defines.train_state.wait_station and train.station == e.entity then
                 local routenum = global.route_map[e.entity.backer_name]
                 if routenum ~= nil then
                     global.routes[routenum].trains[train.id] = train
