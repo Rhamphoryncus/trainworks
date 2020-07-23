@@ -106,30 +106,61 @@ function reset_train(train)
     global.train_lastactivity[train.id] = game.tick
 end
 
-function extract_inventories(invs, itemname, amount)
+function extract_inventories_unbalanced(invs, itemname, amount)
     -- XXX FIXME should first attempt a balanced extraction
-    local extracted = 0
+    local transferred = 0
     for i, inv in pairs(invs) do
-        if amount - extracted <= 0 then
+        if amount - transferred <= 0 then
             break
         end
-        extracted = extracted + inv.remove({name=itemname, count=(amount-extracted)})
+        transferred = transferred + inv.remove({name=itemname, count=(amount-transferred)})
     end
-    return extracted
+    return transferred
+end
+
+function extract_inventories(invs, itemname, amount)
+    -- First pass, find out how much is already stored
+    local found = {}
+    local found_total = 0
+    for i, inv in pairs(invs) do
+        local x = inv.get_item_count(itemname)
+        found[i] = x
+        found_total = found_total + x
+    end
+    local target = math.ceil((found_total - amount) / #invs)
+
+    -- Second pass, bring every inventory up to the average (target) amount
+    local transferred = 0
+    for i, inv in pairs(invs) do
+        local count = found[i] - target
+        if count + transferred > amount then
+            count = amount - transferred
+        end
+        if count > 0 then
+            transferred = transferred + inv.remove({name=itemname, count=count})
+        end
+    end
+
+    -- Third pass, squeeze in any remainder anywhere there's space
+    if transferred < amount then
+        transferred = transferred + extract_inventories_unbalanced(invs, itemname, amount-transferred)
+    end
+
+    return transferred
 end
 
 function insert_inventories_unbalanced(invs, itemname, amount)
     -- XXX FIXME should first attempt a balanced insertion
     -- Or maybe that should be a separate function used only on chests, not cargo wagons?
     -- Or maintain balance in the chests, not just the transfer amounts?
-    local inserted = 0
+    local transferred = 0
     for i, inv in pairs(invs) do
-        if amount - inserted <= 0 then
+        if amount - transferred <= 0 then
             break
         end
-        inserted = inserted + inv.insert({name=itemname, count=(amount-inserted)})
+        transferred = transferred + inv.insert({name=itemname, count=(amount-transferred)})
     end
-    return inserted
+    return transferred
 end
 
 function insert_inventories(invs, itemname, amount)
@@ -144,23 +175,23 @@ function insert_inventories(invs, itemname, amount)
     local target = math.floor((found_total + amount) / #invs)
 
     -- Second pass, bring every inventory up to the average (target) amount
-    local inserted = 0
+    local transferred = 0
     for i, inv in pairs(invs) do
         local count = target - found[i]
-        if count + inserted > amount then
-            count = amount - inserted
+        if count + transferred > amount then
+            count = amount - transferred
         end
         if count > 0 then
-            inserted = inserted + inv.insert({name=itemname, count=count})
+            transferred = transferred + inv.insert({name=itemname, count=count})
         end
     end
 
     -- Third pass, squeeze in any remainder anywhere there's space
-    if inserted < amount then
-        inserted = inserted + insert_inventories_unbalanced(invs, itemname, amount-inserted)
+    if transferred < amount then
+        transferred = transferred + insert_inventories_unbalanced(invs, itemname, amount-transferred)
     end
 
-    return inserted
+    return transferred
 end
 
 function transfer_inventories(src, dest, actions)
