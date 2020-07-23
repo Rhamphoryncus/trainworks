@@ -106,19 +106,7 @@ function reset_train(train)
     global.train_lastactivity[train.id] = game.tick
 end
 
-function extract_inventories_unbalanced(invs, itemname, amount)
-    -- XXX FIXME should first attempt a balanced extraction
-    local transferred = 0
-    for i, inv in pairs(invs) do
-        if amount - transferred <= 0 then
-            break
-        end
-        transferred = transferred + inv.remove({name=itemname, count=(amount-transferred)})
-    end
-    return transferred
-end
-
-function extract_inventories(invs, itemname, amount)
+function transfer_inventories_balanced(invs, itemname, amount, extract)
     -- First pass, find out how much is already stored
     local found = {}
     local found_total = 0
@@ -127,68 +115,47 @@ function extract_inventories(invs, itemname, amount)
         found[i] = x
         found_total = found_total + x
     end
-    local target = math.ceil((found_total - amount) / #invs)
+    local target = nil
+    if extract then
+        target = math.ceil((found_total - amount) / #invs)
+    else
+        target = math.floor((found_total + amount) / #invs)
+    end
 
     -- Second pass, bring every inventory up to the average (target) amount
     local transferred = 0
     for i, inv in pairs(invs) do
-        local count = found[i] - target
+        local count = nil
+        if extract then
+            count = found[i] - target
+        else
+            count = target - found[i]
+        end
+
         if count + transferred > amount then
             count = amount - transferred
         end
         if count > 0 then
-            transferred = transferred + inv.remove({name=itemname, count=count})
+            if extract then
+                transferred = transferred + inv.remove({name=itemname, count=count})
+            else
+                transferred = transferred + inv.insert({name=itemname, count=count})
+            end
         end
     end
 
     -- Third pass, squeeze in any remainder anywhere there's space
     if transferred < amount then
-        transferred = transferred + extract_inventories_unbalanced(invs, itemname, amount-transferred)
-    end
-
-    return transferred
-end
-
-function insert_inventories_unbalanced(invs, itemname, amount)
-    -- XXX FIXME should first attempt a balanced insertion
-    -- Or maybe that should be a separate function used only on chests, not cargo wagons?
-    -- Or maintain balance in the chests, not just the transfer amounts?
-    local transferred = 0
-    for i, inv in pairs(invs) do
-        if amount - transferred <= 0 then
-            break
+        for i, inv in pairs(invs) do
+            if amount - transferred <= 0 then
+                break
+            end
+            if extract then
+                transferred = transferred + inv.remove({name=itemname, count=(amount-transferred)})
+            else
+                transferred = transferred + inv.insert({name=itemname, count=(amount-transferred)})
+            end
         end
-        transferred = transferred + inv.insert({name=itemname, count=(amount-transferred)})
-    end
-    return transferred
-end
-
-function insert_inventories(invs, itemname, amount)
-    -- First pass, find out how much is already stored
-    local found = {}
-    local found_total = 0
-    for i, inv in pairs(invs) do
-        local x = inv.get_item_count(itemname)
-        found[i] = x
-        found_total = found_total + x
-    end
-    local target = math.floor((found_total + amount) / #invs)
-
-    -- Second pass, bring every inventory up to the average (target) amount
-    local transferred = 0
-    for i, inv in pairs(invs) do
-        local count = target - found[i]
-        if count + transferred > amount then
-            count = amount - transferred
-        end
-        if count > 0 then
-            transferred = transferred + inv.insert({name=itemname, count=count})
-        end
-    end
-
-    -- Third pass, squeeze in any remainder anywhere there's space
-    if transferred < amount then
-        transferred = transferred + insert_inventories_unbalanced(invs, itemname, amount-transferred)
     end
 
     return transferred
@@ -196,13 +163,13 @@ end
 
 function transfer_inventories(src, dest, actions)
     for itemname, amount in pairs(actions) do
-        local removed = extract_inventories(src, itemname, amount)
+        local removed = transfer_inventories_balanced(src, itemname, amount, true)
         if removed > 0 then
-            local inserted = insert_inventories(dest, itemname, removed)
+            local inserted = transfer_inventories_balanced(dest, itemname, removed, false)
             local bounce = removed - inserted
             if bounce > 0 then
                 log("Bounce: " .. fstr(bounce))
-                local bounced = insert_inventories(src, itemname, bounce)
+                local bounced = transfer_inventories_balanced(src, itemname, bounce, false)
                 if bounce ~= bounced then
                     -- XXX print an error to console.  This might happen if a user applies filters or a bar to a chest/wagon
                     log("Unable to bounce, items deleted!")
