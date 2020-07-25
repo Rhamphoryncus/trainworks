@@ -219,10 +219,49 @@ function action_train(train)
 end
 
 
+function find_chests(surface, x, y, direction)
+    -- Note: skips the first location
+    local chestlist = {}
+    local last_x, last_y = x, y
+
+    while true do
+        if direction == defines.direction.north then
+            y = y + 7
+        elseif direction == defines.direction.south then
+            y = y - 7
+        elseif direction == defines.direction.east then
+            x = x + 7
+        elseif direction == defines.direction.west then
+            x = x - 7
+        end
+
+        local chests = surface.find_entities_filtered{type="container", position={x, y}}
+        local chest = chests[1] -- XXX ugly
+
+        if chest == nil then
+            break
+        end
+
+        table.insert(chestlist, chest)
+        last_x, last_y = x, y
+    end
+
+    return chestlist, last_x, last_y
+end
+
+
+flip_direction = {}
+flip_direction[defines.direction.north] = defines.direction.south
+flip_direction[defines.direction.northeast] = defines.direction.southwest
+flip_direction[defines.direction.east] = defines.direction.west
+flip_direction[defines.direction.southeast] = defines.direction.northwest
+flip_direction[defines.direction.south] = defines.direction.north
+flip_direction[defines.direction.southwest] = defines.direction.northeast
+flip_direction[defines.direction.west] = defines.direction.east
+flip_direction[defines.direction.northwest] = defines.direction.southeast
+
+
 function find_stop_chests(stop)
-    -- loop through the chest and each chest's neighbour, making sure they're aligned on the tracks (later) and have no stop registered yet
-    -- if they have a stop abort the register, make the item drop or something instead.
-    -- XXX better to check the stop orientation and detect chests exactly where they should be?
     local offset = {0.0, 0.0}
     local pos = stop.position
     if stop.direction == defines.direction.north then
@@ -236,91 +275,40 @@ function find_stop_chests(stop)
         pos.x = pos.x + 3
     end
 
-    local chestlist = {}
-
-    -- XXX FIXME use search_for_stop() to make sure there isn't already a stop
-
-    while true do
-        if stop.direction == defines.direction.north then
-            -- North facing stop means we go south each step to find the chests/wagons
-            pos.y = pos.y - 7
-        elseif stop.direction == defines.direction.south then
-            pos.y = pos.y + 7
-        elseif stop.direction == defines.direction.east then
-            pos.x = pos.x - 7
-        elseif stop.direction == defines.direction.west then
-            pos.x = pos.x + 7
-        end
-
-        local chests = stop.surface.find_entities_filtered{type="container", position=pos}
-        local chest = chests[1] -- XXX ugly
-
-        log("Warg " .. fstr(stop) .. " (" .. fstr(stop.position) .. ") -> " .. fstr(chests) .. " (" .. fstr(pos) .. ")")
-        if chest == nil then
-            break
-        end
-
-        table.insert(chestlist, chest)
-        log("Inserted 1 " .. serpent.line(chest) .. " into " .. serpent.line(chestlist) .. " of size " .. serpent.line(#chestlist))
-    end
+    local chestlist = find_chests(stop.surface, pos.x, pos.y, flip_direction[stop.direction])
+    --game.print("find_stop_chests: " .. fstr(chestlist))
 
     -- XXX FIXME last_activity should be per-typename and provided vs requested
     global.stopchests[stop.unit_number] = {stop=stop, chests=chestlist, last_activity=game.tick}
     global.stop_actions[stop.unit_number] = {}
---    log("b2 " .. serpent.block(global.stopchests) .. " % " .. serpent.line(#global.stopchests))
---    log("ARGH " .. serpent.line(global.stopchests[stop.unit_number]))
-
---    local foo = {}
---    foo[stop] = "baz"
---    log("PBBT " .. serpent.dump(foo))
 end
 
 
 function search_for_stop(surface, pos, direction)
-    pos = {x=pos.x, y=pos.y}  -- Clone pos so we don't modify the passed-in table
+    local chestlist, x, y = find_chests(surface, pos.x, pos.y, direction)
+    --game.print("search_for_stop (" .. fstr(direction) .. "): x:" .. fstr(x) .. " y:" .. fstr(y) .. "  " .. fstr(chestlist))
 
-    while true do
-        -- XXX check for stop first
-        local stoppos = {x=pos.x, y=pos.y}
-        if direction == defines.direction.north then
-            stoppos.y = pos.y + 3
-        elseif direction == defines.direction.south then
-            stoppos.y = pos.y - 3
-        elseif direction == defines.direction.east then
-            stoppos.x = pos.x + 3
-        elseif direction == defines.direction.west then
-            stoppos.x = pos.x - 3
-        end
-        local stops = surface.find_entities_filtered{type="train-stop", position=stoppos}
-        local stop = stops[1]  -- XXX ugly hack
---        log("Searched at " .. fstr(stoppos) .. " and " .. fstr(pos) .. " -> " .. fstr(stops) .. ", " .. fstr(stop))
-        if stop ~= nil then
-            return stop
-        end
-
-        local chests = surface.find_entities_filtered{type="container", position=pos}
-        local chest = chests[1]  -- XXX ugly hack
-        if chest == nil then
-            return nil  -- No stop found
-        end
-
-        if direction == defines.direction.north then
-            -- Following the orientation of the stop.  North-facing stop means we go north each step to reach it
-            pos.y = pos.y + 7
-        elseif direction == defines.direction.south then
-            pos.y = pos.y - 7
-        elseif direction == defines.direction.east then
-            pos.x = pos.x + 7
-        elseif direction == defines.direction.west then
-            pos.x = pos.x - 7
-        end
+    if direction == defines.direction.north then
+        y = y + 10
+    elseif direction == defines.direction.south then
+        y = y - 10
+    elseif direction == defines.direction.east then
+        x = x + 10
+    elseif direction == defines.direction.west then
+        x = x - 10
     end
+
+    local stops = surface.find_entities_filtered{type="train-stop", position={x, y}}
+    local stop = stops[1]  -- XXX ugly hack
+    --game.print("Found: " .. fstr(stop))
+
+    return stop
 end
 
 
 function register_chest(chest)
     -- XXX FIXME check chest orientation, which may depend on having all the overlap stuff.  Assuming east-west for now.
-    log("Feh " .. fstr(chest) .. " & " .. fstr(chest.position))
+    --log("Feh " .. fstr(chest) .. " & " .. fstr(chest.position))
     local leftpos = {chest.position.x - 7, chest.position.y}
     local rightpos = {chest.position.x + 7, chest.position.y}
     local left = chest.surface.find_entities_filtered{type="container", position=leftpos}
@@ -328,7 +316,7 @@ function register_chest(chest)
 
     local stop1 = search_for_stop(chest.surface, chest.position, defines.direction.east)
     local stop2 = search_for_stop(chest.surface, chest.position, defines.direction.west)
-    log("searched: " .. fstr(stop1) .. ", " .. fstr(stop2))
+    --log("searched: " .. fstr(stop1) .. ", " .. fstr(stop2))
     if stop1 ~= nil and stop2 ~= nil then
         -- XXX return an error.  Stops aren't allowed to overlap and use the same set of chests.
         log("Error, would merge chest strings")

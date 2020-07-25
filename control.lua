@@ -4,8 +4,7 @@
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
 -- Add vertical chests
 -- Allow chests on both sides of the track
--- Balance chest contents when unloading
--- Consider making depots the first part of a schedule to see if it becomes the default when copy-pasting the schedule
+-- Add a function to chase a line of chests for register_chest and such
 
 
 require("scripts.util")
