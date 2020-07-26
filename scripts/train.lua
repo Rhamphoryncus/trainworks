@@ -220,7 +220,8 @@ end
 
 
 valid_container_types = {
-    tw_chest = true
+    tw_chest_horizontal = true,
+    tw_chest_vertical = true
 }
 
 
@@ -240,11 +241,12 @@ function find_chests(surface, x, y, direction)
             x = x - 7
         end
 
+        --game.print("Searching for chest at " .. fstr(x) .. "," .. fstr(y))
         local chests = surface.find_entities_filtered{type="container", position={x, y}}
         local chest = chests[1] -- XXX ugly
         -- XXX FIXME check against valid_container_types
 
-        if chest == nil then
+        if chest == nil or not valid_container_types[chest.name] then
             break
         end
 
@@ -364,23 +366,28 @@ end
 
 
 function register_chest(chest)
-    local stop1 = search_for_stop_same(chest.surface, chest.position, defines.direction.east)
-    local stop2 = search_for_stop_same(chest.surface, chest.position, defines.direction.west)
-    local stop3 = search_for_stop_opposite(chest.surface, chest.position, defines.direction.east)
-    local stop4 = search_for_stop_opposite(chest.surface, chest.position, defines.direction.west)
+    local stops = nil
+
+    -- XXX FIXME generalize this for future expansion, such as bot logistic chests
+    if chest.name == "tw_chest_horizontal" then
+        stops = {
+            search_for_stop_same(chest.surface, chest.position, defines.direction.east),
+            search_for_stop_same(chest.surface, chest.position, defines.direction.west),
+            search_for_stop_opposite(chest.surface, chest.position, defines.direction.east),
+            search_for_stop_opposite(chest.surface, chest.position, defines.direction.west)
+        }
+    elseif chest.name == "tw_chest_vertical" then
+        stops = {
+            search_for_stop_same(chest.surface, chest.position, defines.direction.north),
+            search_for_stop_same(chest.surface, chest.position, defines.direction.south),
+            search_for_stop_opposite(chest.surface, chest.position, defines.direction.north),
+            search_for_stop_opposite(chest.surface, chest.position, defines.direction.south)
+        }
+    end
 
     -- XXX I allow multiple stops to use the same chest.  Trains might get a bit confused but it's not catastrophic
-    if stop1 ~= nil then
-        find_stop_chests(stop1)
-    end
-    if stop2 ~= nil then
-        find_stop_chests(stop2)
-    end
-    if stop3 ~= nil then
-        find_stop_chests(stop3)
-    end
-    if stop4 ~= nil then
-        find_stop_chests(stop4)
+    for i, stop in pairs(stops) do
+        find_stop_chests(stop)
     end
 end
 

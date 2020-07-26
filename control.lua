@@ -2,8 +2,6 @@
 -- Handle destruction of entities.  Probably just .valid checks and add them to a global "delete me" table to be processed later?
 -- Add profiling hooks
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
--- Add vertical chests
--- Add a function to chase a line of chests for register_chest and such
 -- Add english labels for everything
 -- Add crude graphic for chests
 
@@ -72,7 +70,9 @@ script.on_event({defines.events.on_built_entity},
             control.send_to_train = false
             find_stop_chests(e.created_entity)
         elseif e.created_entity.name == "locomotive" then
-        elseif e.created_entity.name == "tw_chest" then
+        elseif e.created_entity.name == "tw_chest_horizontal" then
+            register_chest(e.created_entity)
+        elseif e.created_entity.name == "tw_chest_vertical" then
             register_chest(e.created_entity)
         end
     end

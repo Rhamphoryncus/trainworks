@@ -29,18 +29,36 @@ data:extend{stop, stop_item, stop_recipe}
 
 
 local chest = table.deepcopy(data.raw.container["iron-chest"])
-chest.name = "tw_chest"
+chest.name = "tw_chest_horizontal"
 chest.inventory_size = 50
 chest.collision_box = {{-2.9, -0.9}, {2.9, 0.9}}
 chest.selection_box = {{-2.9, -0.9}, {2.9, 0.9}}
 
 local chest_item = table.deepcopy(data.raw.item["iron-chest"])
-chest_item.name = "tw_chest"
-chest_item.place_result = "tw_chest"
+chest_item.name = "tw_chest_horizontal"
+chest_item.place_result = "tw_chest_horizontal"
 
 local chest_recipe = table.deepcopy(data.raw.recipe["iron-chest"])
 chest_recipe.enabled = true
-chest_recipe.name = "tw_chest"
-chest_recipe.result = "tw_chest"
+chest_recipe.name = "tw_chest_horizontal"
+chest_recipe.result = "tw_chest_horizontal"
+
+data:extend{chest, chest_item, chest_recipe}
+
+
+local chest = table.deepcopy(data.raw.container["iron-chest"])
+chest.name = "tw_chest_vertical"
+chest.inventory_size = 50
+chest.collision_box = {{-0.9, -2.9}, {0.9, 2.9}}
+chest.selection_box = {{-0.9, -2.9}, {0.9, 2.9}}
+
+local chest_item = table.deepcopy(data.raw.item["iron-chest"])
+chest_item.name = "tw_chest_vertical"
+chest_item.place_result = "tw_chest_vertical"
+
+local chest_recipe = table.deepcopy(data.raw.recipe["iron-chest"])
+chest_recipe.enabled = true
+chest_recipe.name = "tw_chest_vertical"
+chest_recipe.result = "tw_chest_vertical"
 
 data:extend{chest, chest_item, chest_recipe}
