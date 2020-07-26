@@ -219,6 +219,11 @@ function action_train(train)
 end
 
 
+valid_container_types = {
+    tw_chest = true
+}
+
+
 function find_chests(surface, x, y, direction)
     -- Note: skips the first location
     local chestlist = {}
@@ -226,9 +231,9 @@ function find_chests(surface, x, y, direction)
 
     while true do
         if direction == defines.direction.north then
-            y = y + 7
-        elseif direction == defines.direction.south then
             y = y - 7
+        elseif direction == defines.direction.south then
+            y = y + 7
         elseif direction == defines.direction.east then
             x = x + 7
         elseif direction == defines.direction.west then
@@ -237,6 +242,7 @@ function find_chests(surface, x, y, direction)
 
         local chests = surface.find_entities_filtered{type="container", position={x, y}}
         local chest = chests[1] -- XXX ugly
+        -- XXX FIXME check against valid_container_types
 
         if chest == nil then
             break
@@ -262,21 +268,46 @@ flip_direction[defines.direction.northwest] = defines.direction.southeast
 
 
 function find_stop_chests(stop)
-    local offset = {0.0, 0.0}
-    local pos = stop.position
+    -- Chests on the same side as the stop
+    local x, y = stop.position.x, stop.position.y
     if stop.direction == defines.direction.north then
         -- North facing trainstop means the first wagon is a bit south of it
-        pos.y = pos.y - 3
+        y = y + 3
     elseif stop.direction == defines.direction.south then
-        pos.y = pos.y + 3
+        y = y - 3
     elseif stop.direction == defines.direction.east then
-        pos.x = pos.x - 3
+        x = x - 3
     elseif stop.direction == defines.direction.west then
-        pos.x = pos.x + 3
+        x = x + 3
     end
 
-    local chestlist = find_chests(stop.surface, pos.x, pos.y, flip_direction[stop.direction])
-    --game.print("find_stop_chests: " .. fstr(chestlist))
+    local chestlist = find_chests(stop.surface, x, y, flip_direction[stop.direction])
+    --game.print("find_stop_chests same: " .. fstr(stop) .. " -> " .. fstr(chestlist) .. " [" .. fstr(x) .. "," .. fstr(y) .. "]")
+
+    -- Chests on the opposite side from the stop
+    local x, y = stop.position.x, stop.position.y
+    if stop.direction == defines.direction.north then
+        -- North facing trainstop means the first wagon is a bit south of it
+        x = x - 4
+        y = y + 3
+    elseif stop.direction == defines.direction.south then
+        x = x + 4
+        y = y - 3
+    elseif stop.direction == defines.direction.east then
+        x = x - 3
+        y = y - 4
+    elseif stop.direction == defines.direction.west then
+        x = x + 3
+        y = y + 4
+    end
+
+    local chestlist2 = find_chests(stop.surface, x, y, flip_direction[stop.direction])
+    --game.print("find_stop_chests opposite: " .. fstr(stop) .. " -> " .. fstr(chestlist2) .. " [" .. fstr(x) .. "," .. fstr(y) .. "]")
+
+    -- Merge the two lists
+    for x, chest in pairs(chestlist2) do
+        table.insert(chestlist, chest)
+    end
 
     -- XXX FIXME last_activity should be per-typename and provided vs requested
     global.stopchests[stop.unit_number] = {stop=stop, chests=chestlist, last_activity=game.tick}
@@ -284,14 +315,14 @@ function find_stop_chests(stop)
 end
 
 
-function search_for_stop(surface, pos, direction)
+function search_for_stop_same(surface, pos, direction)
     local chestlist, x, y = find_chests(surface, pos.x, pos.y, direction)
-    --game.print("search_for_stop (" .. fstr(direction) .. "): x:" .. fstr(x) .. " y:" .. fstr(y) .. "  " .. fstr(chestlist))
+    --game.print("search_for_stop_same (" .. fstr(direction) .. "): x:" .. fstr(x) .. " y:" .. fstr(y) .. "  " .. fstr(chestlist))
 
     if direction == defines.direction.north then
-        y = y + 10
-    elseif direction == defines.direction.south then
         y = y - 10
+    elseif direction == defines.direction.south then
+        y = y + 10
     elseif direction == defines.direction.east then
         x = x + 10
     elseif direction == defines.direction.west then
@@ -306,27 +337,50 @@ function search_for_stop(surface, pos, direction)
 end
 
 
-function register_chest(chest)
-    -- XXX FIXME check chest orientation, which may depend on having all the overlap stuff.  Assuming east-west for now.
-    --log("Feh " .. fstr(chest) .. " & " .. fstr(chest.position))
-    local leftpos = {chest.position.x - 7, chest.position.y}
-    local rightpos = {chest.position.x + 7, chest.position.y}
-    local left = chest.surface.find_entities_filtered{type="container", position=leftpos}
-    local right = chest.surface.find_entities_filtered{type="container", position=rightpos}
+function search_for_stop_opposite(surface, pos, direction)
+    local chestlist, x, y = find_chests(surface, pos.x, pos.y, direction)
+    --game.print("search_for_stop_opposite (" .. fstr(direction) .. "): x:" .. fstr(x) .. " y:" .. fstr(y) .. "  " .. fstr(chestlist))
 
-    local stop1 = search_for_stop(chest.surface, chest.position, defines.direction.east)
-    local stop2 = search_for_stop(chest.surface, chest.position, defines.direction.west)
-    --log("searched: " .. fstr(stop1) .. ", " .. fstr(stop2))
-    if stop1 ~= nil and stop2 ~= nil then
-        -- XXX return an error.  Stops aren't allowed to overlap and use the same set of chests.
-        log("Error, would merge chest strings")
-        return
+    if direction == defines.direction.north then
+        x = x + 4
+        y = y - 10
+    elseif direction == defines.direction.south then
+        x = x - 4
+        y = y + 10
+    elseif direction == defines.direction.east then
+        x = x + 10
+        y = y + 4
+    elseif direction == defines.direction.west then
+        x = x - 10
+        y = y - 4
     end
 
+    local stops = surface.find_entities_filtered{type="train-stop", position={x, y}}
+    local stop = stops[1]  -- XXX ugly hack
+    --game.print("Found: " .. fstr(stop))
+
+    return stop
+end
+
+
+function register_chest(chest)
+    local stop1 = search_for_stop_same(chest.surface, chest.position, defines.direction.east)
+    local stop2 = search_for_stop_same(chest.surface, chest.position, defines.direction.west)
+    local stop3 = search_for_stop_opposite(chest.surface, chest.position, defines.direction.east)
+    local stop4 = search_for_stop_opposite(chest.surface, chest.position, defines.direction.west)
+
+    -- XXX I allow multiple stops to use the same chest.  Trains might get a bit confused but it's not catastrophic
     if stop1 ~= nil then
         find_stop_chests(stop1)
-    elseif stop2 ~= nil then
+    end
+    if stop2 ~= nil then
         find_stop_chests(stop2)
+    end
+    if stop3 ~= nil then
+        find_stop_chests(stop3)
+    end
+    if stop4 ~= nil then
+        find_stop_chests(stop4)
     end
 end
 

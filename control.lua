@@ -3,8 +3,9 @@
 -- Add profiling hooks
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
 -- Add vertical chests
--- Allow chests on both sides of the track
 -- Add a function to chase a line of chests for register_chest and such
+-- Add english labels for everything
+-- Add crude graphic for chests
 
 
 require("scripts.util")
