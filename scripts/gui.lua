@@ -141,11 +141,8 @@ function populate_modify(playernum, routenum)
     local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_modify
     local flow = frame.add{type="flow", name="trainworks_modifyflow", direction="vertical"}
     flow.add{type="textfield", name="trainworks_modifyname", text=global.routes[routenum].name}
-    local universalcaption = {"gui.toggleuniversal"}
-    if global.universal_routes[routenum] then
-        universalcaption = "Undo universal"
-    end
-    flow.add{type="button", name="trainworks_toggleuniversal", caption=universalcaption}
+    local state = not not global.universal_routes[routenum]
+    flow.add{type="checkbox", name="trainworks_toggleuniversal", state=state, caption={"gui.toggleuniversal"}}
     flow.add{type="textfield", name="trainworks_modifyfilter"}
 
     -- List of stations that could be added to this route
@@ -211,8 +208,6 @@ function activate_universal(routenum)
         -- Update the route modify window
         local modifypane = global.gui_routemodify[playernum]
         if modifypane ~= nil then
-            modifypane.trainworks_toggleuniversal.caption = "Undo universal"
-
             for childname, child in pairs(modifypane.trainworks_modifypane.children) do
                 child.enabled = false
             end
@@ -232,8 +227,6 @@ function deactivate_universal(routenum)
         -- Update the route modify window
         local modifypane = global.gui_routemodify[playernum]
         if modifypane ~= nil then
-            modifypane.trainworks_toggleuniversal.caption = {"gui.toggleuniversal"}
-
             for childname, child in pairs(modifypane.trainworks_modifypane.children) do
                 child.enabled = true
             end

@@ -2,10 +2,8 @@
 -- Handle destruction of entities.  Probably just .valid checks and add them to a global "delete me" table to be processed later?
 -- Add profiling hooks
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
--- Add crude graphic for chests
 -- Add GUI buttons for creating new routes and deleting empty routes
 -- Figure out other entity built events
--- Make universal a checkbox
 
 
 require("scripts.util")
