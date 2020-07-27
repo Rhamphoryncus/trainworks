@@ -4,6 +4,8 @@
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
 -- Add english labels for everything
 -- Add crude graphic for chests
+-- Add GUI buttons for creating new routes and deleting empty routes
+-- Figure out other entity built events
 
 
 require("scripts.util")
