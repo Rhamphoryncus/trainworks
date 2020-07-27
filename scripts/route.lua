@@ -257,7 +257,7 @@ function tasks.service_route_requests(task)
                 if beststopnum ~= nil then
                     local actions = {}
                     actions[itemname] = math.min(amount, bestamount)
-                    log("Min2: " .. fstr(actions))
+                    --log("Min2: " .. fstr(actions))
                     dispatch_train(routenum, beststopnum, stopnum, actions)
                 end
             end

@@ -4,6 +4,7 @@
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
 -- Add GUI buttons for creating new routes and deleting empty routes
 -- Figure out other entity built events
+-- Figure out why blueprinting shared station names does weird things
 
 
 require("scripts.util")
@@ -55,28 +56,31 @@ script.on_event({defines.events.on_tick},
 )
 
 
-script.on_event({defines.events.on_built_entity},
-    function (e)
-        log("Built " .. e.created_entity.name)
-        if e.created_entity.name == "tw_depot" then
-            -- XXX temporary bodge until I have a proper GUI
-            local routenum = global.route_counter
-            global.route_counter = global.route_counter + 1
-            global.routes[routenum] = {name=e.created_entity.backer_name, trains={}, stops={}, provided={}, requested={}}
-            global.route_map[e.created_entity.backer_name] = routenum
-            global.universal_routes[routenum] = true
-        elseif e.created_entity.name == "tw_stop" then
-            local control = e.created_entity.get_or_create_control_behavior()
-            control.send_to_train = false
-            find_stop_chests(e.created_entity)
-        elseif e.created_entity.name == "locomotive" then
-        elseif e.created_entity.name == "tw_chest_horizontal" then
-            register_chest(e.created_entity)
-        elseif e.created_entity.name == "tw_chest_vertical" then
-            register_chest(e.created_entity)
-        end
+function handle_built_event(ent)
+    log("Built " .. ent.name)
+    if ent.name == "tw_depot" then
+        -- XXX temporary bodge until I have a proper GUI
+        local routenum = global.route_counter
+        global.route_counter = global.route_counter + 1
+        global.routes[routenum] = {name=ent.backer_name, trains={}, stops={}, provided={}, requested={}}
+        global.route_map[ent.backer_name] = routenum
+        global.universal_routes[routenum] = true
+    elseif ent.name == "tw_stop" then
+        local control = ent.get_or_create_control_behavior()
+        control.send_to_train = false
+        find_stop_chests(ent)
+    elseif ent.name == "locomotive" then
+    elseif ent.name == "tw_chest_horizontal" then
+        register_chest(ent)
+    elseif ent.name == "tw_chest_vertical" then
+        register_chest(ent)
     end
-)
+end
+script.on_event({defines.events.on_built_entity}, function (e) handle_built_event(e.created_entity) end)  -- Entity built event
+script.on_event({defines.events.on_robot_built_entity}, function (e) handle_built_event(e.created_entity) end)  -- Other built event
+script.on_event({defines.events.script_raised_built}, function (e) handle_built_event(e.entity) end)  -- Other other built event
+script.on_event({defines.events.script_raised_revive}, function (e) handle_built_event(e.entity) end)  -- Other other other built event
+script.on_event({defines.events.on_entity_cloned}, function (e) handle_built_event(e.destination) end)  -- Other other other other built event
 
 
 script.on_event({defines.events.on_train_changed_state},
