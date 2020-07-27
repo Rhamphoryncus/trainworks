@@ -33,6 +33,13 @@ chest.name = "tw_chest_horizontal"
 chest.inventory_size = 50
 chest.collision_box = {{-2.9, -0.9}, {2.9, 0.9}}
 chest.selection_box = {{-2.9, -0.9}, {2.9, 0.9}}
+chest.picture.layers[1].hr_version = nil  -- XXX Does this actually work?
+chest.picture.layers[1].scale = 2
+chest.picture.layers[3] = table.deepcopy(chest.picture.layers[1])
+chest.picture.layers[4] = table.deepcopy(chest.picture.layers[1])
+chest.picture.layers[1].shift = util.by_pixel(-64, 0)
+chest.picture.layers[3].shift = util.by_pixel(0, 0)
+chest.picture.layers[4].shift = util.by_pixel(64, 0)
 
 local chest_item = table.deepcopy(data.raw.item["iron-chest"])
 chest_item.name = "tw_chest_horizontal"
@@ -51,6 +58,13 @@ chest.name = "tw_chest_vertical"
 chest.inventory_size = 50
 chest.collision_box = {{-0.9, -2.9}, {0.9, 2.9}}
 chest.selection_box = {{-0.9, -2.9}, {0.9, 2.9}}
+chest.picture.layers[1].hr_version = nil  -- XXX Does this actually work?
+chest.picture.layers[1].scale = 2
+chest.picture.layers[3] = table.deepcopy(chest.picture.layers[1])
+chest.picture.layers[4] = table.deepcopy(chest.picture.layers[1])
+chest.picture.layers[1].shift = util.by_pixel(0, -64)
+chest.picture.layers[3].shift = util.by_pixel(0, 0)
+chest.picture.layers[4].shift = util.by_pixel(0, 64)
 
 local chest_item = table.deepcopy(data.raw.item["iron-chest"])
 chest_item.name = "tw_chest_vertical"
