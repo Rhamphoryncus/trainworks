@@ -9,7 +9,7 @@ function create_gui(player)
     {
         type="button",
         name="trainworks_top_button",
-        caption="Trainworks",
+        caption={"gui.trainworks"},
         style=mod_gui.button_style
     }
 
@@ -17,7 +17,7 @@ function create_gui(player)
     {
         type="frame",
         name="trainworks_status",
-        caption="Status",
+        caption={"gui.status"},
         style=mod_gui.frame_style
     }
     mod_gui.get_frame_flow(player).trainworks_status.visible = false
@@ -26,7 +26,7 @@ function create_gui(player)
     {
         type="frame",
         name="trainworks_modify",
-        caption="Modify",
+        caption={"gui.modify"},
         style=mod_gui.frame_style
     }
     mod_gui.get_frame_flow(player).trainworks_modify.visible = false
@@ -90,7 +90,7 @@ function populate_status(playernum)
 
     -- Stops within the selected route
     local flow = frame.add{type="flow", name="trainworks_stationflow", direction="vertical"}
-    flow.add{type="button", name="trainworks_showmodify", caption="Modify"}
+    flow.add{type="button", name="trainworks_showmodify", caption={"gui.showmodify"}}
     local statuspane = flow.add{type="scroll-pane", name="trainworks_stationpane", vertical_scroll_policy="auto-and-reserve-space"}
     global.gui_routestatus[playernum] = statuspane
     if first ~= nil then
@@ -141,7 +141,7 @@ function populate_modify(playernum, routenum)
     local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_modify
     local flow = frame.add{type="flow", name="trainworks_modifyflow", direction="vertical"}
     flow.add{type="textfield", name="trainworks_modifyname", text=global.routes[routenum].name}
-    local universalcaption = "Make universal"
+    local universalcaption = {"gui.toggleuniversal"}
     if global.universal_routes[routenum] then
         universalcaption = "Undo universal"
     end
@@ -232,7 +232,7 @@ function deactivate_universal(routenum)
         -- Update the route modify window
         local modifypane = global.gui_routemodify[playernum]
         if modifypane ~= nil then
-            modifypane.trainworks_toggleuniversal.caption = "Make universal"
+            modifypane.trainworks_toggleuniversal.caption = {"gui.toggleuniversal"}
 
             for childname, child in pairs(modifypane.trainworks_modifypane.children) do
                 child.enabled = true
