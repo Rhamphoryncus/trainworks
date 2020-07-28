@@ -3,8 +3,8 @@
 -- Add profiling hooks
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
 -- Add GUI buttons for creating new routes and deleting empty routes
--- Figure out other entity built events
--- Figure out why blueprinting shared station names does weird things
+-- Figure out why blueprinting shared station names does weird things.  It's because the schedule is by-name but the routing is by-stop
+-- Add temporary stops
 
 
 require("scripts.util")

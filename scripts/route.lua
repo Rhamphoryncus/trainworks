@@ -33,18 +33,16 @@ function calculate_value_for_stop(stopnum)
     end
 
     for i, chest in pairs(chests) do
-        if not chest.valid then
-            return nil
-        end
+        if chest.valid then
+            local inv = chest.get_inventory(defines.inventory.chest).get_contents()
 
-        local inv = chest.get_inventory(defines.inventory.chest).get_contents()
-
-        -- Add inventory to value
-        for itemname, amount in pairs(inv) do
-            if value[itemname] == nil then
-                value[itemname] = {have=0, want=0, pickup=0, dropoff=0}
+            -- Add inventory to value
+            for itemname, amount in pairs(inv) do
+                if value[itemname] == nil then
+                    value[itemname] = {have=0, want=0, pickup=0, dropoff=0}
+                end
+                value[itemname].have = value[itemname].have + amount
             end
-            value[itemname].have = value[itemname].have + amount
         end
     end
 

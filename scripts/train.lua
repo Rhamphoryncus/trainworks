@@ -183,7 +183,9 @@ function get_chest_inventories(stopnum)
     local invs = {}
     local chests = global.stopchests[stopnum].chests
     for i, chest in pairs(chests) do
-        table.insert(invs, chest.get_inventory(defines.inventory.chest))
+        if chest.valid then
+            table.insert(invs, chest.get_inventory(defines.inventory.chest))
+        end
     end
     return invs
 end
@@ -310,6 +312,9 @@ function find_stop_chests(stop)
     for x, chest in pairs(chestlist2) do
         table.insert(chestlist, chest)
     end
+    --if #chestlist > 0 then
+    --    game.print("Chestlist " .. fstr(stop) .. " -> " .. fstr(chestlist))
+    --end
 
     -- XXX FIXME last_activity should be per-typename and provided vs requested
     global.stopchests[stop.unit_number] = {stop=stop, chests=chestlist, last_activity=game.tick}
