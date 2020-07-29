@@ -4,9 +4,11 @@
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
 -- Add GUI buttons for creating new routes and deleting empty routes
 -- Figure out why blueprinting shared station names does weird things.  It's because the schedule is by-name but the routing is by-stop
--- Add temporary stops
 -- Add train status tab that shows lack of fuel/garbage/other conditions
--- Refine temporary stops — get rid of the overdraw, better naming convention, make them unblueprintable/undestroyable
+-- Rebalance weights
+-- Add provider/requester priorities to routes
+-- Add provider/requester priorities to stops
+-- reset_train should reset global.stop_actions and global.train_actions
 
 
 require("scripts.util")
@@ -22,7 +24,6 @@ script.on_init(function()
     global.stop_actions = {}  -- stopnum -> trainid -> {actions, pickup}  -- Actions pending for each stop
         -- actions is itemname -> amount
     global.train_lastactivity = {}  -- trainid -> tick  -- Time the train started to become idle
-    global.train_tempstops = {}  -- trainid -> {stopnum, ...}  -- Temporary stops created for that train
     global.stop_idletrain = {}  -- stopnum -> train  -- Train idling at each stop
     global.values = {}  -- stopnum -> itemname -> {have, want, coming}  -- Previous pass's values
     global.newvalues = {}  -- stopnum -> itemname -> {have, want, coming}  -- Current pass's values
@@ -91,9 +92,9 @@ script.on_event({defines.events.on_train_changed_state},
         local train = e.train
         log("Train state: " .. fstr(e.old_state) .. " -> " .. fstr(train.state))
         -- XXX FIXME this should only respond to trains that have joined a depot
-        if train.state == defines.train_state.wait_station and e.old_state == defines.train_state.arrive_station and train.station ~= nil then
-            log("Train in station: " .. train.station.backer_name)
-            if train.station.prototype.name == "tw_depot" then
+        if train.state == defines.train_state.wait_station and e.old_state == defines.train_state.arrive_station then
+            --log("Train in station: " .. train.station.backer_name)
+            if train.station ~= nil and train.station.prototype.name == "tw_depot" then
                 reset_train(train)
             else
                 action_train(train)
