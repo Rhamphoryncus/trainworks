@@ -44,6 +44,33 @@ function train_is_idling(train)
 end
 
 
+function create_temporary_stops(trainid, stops)
+    assert(global.train_tempstops[trainid] == nil, "Attempting to create temp stops when temp stops already exist")
+    global.train_tempstops[trainid] = {}
+
+    for i, stop in pairs(stops) do
+        local backername = "#"..stop.backer_name.."#"..stop.unit_number
+        local temp = stop.surface.create_entity{name="tw_temporary_stop", position=stop.position, direction=stop.direction, force=stop.force, create_build_effect_smoke=false}
+        temp.backer_name=backername
+
+        table.insert(global.train_tempstops[trainid], temp)
+    end
+
+    return global.train_tempstops[trainid]
+end
+
+
+function destroy_temporary_stops(trainid)
+    if global.train_tempstops[trainid] ~= nil then
+        for i, stop in pairs(global.train_tempstops[trainid]) do
+            stop.destroy()
+        end
+
+        global.train_tempstops[trainid] = nil
+    end
+end
+
+
 function dispatch_train(routenum, sourcenum, destnum, actions)
     local train = nil
     for maybetrainid, maybetrain in pairs(global.routes[routenum].trains) do
@@ -66,11 +93,13 @@ function dispatch_train(routenum, sourcenum, destnum, actions)
         return
     end
 
+    local tempstops = create_temporary_stops(train.id, {source, dest})
+
     local x = {
         current=1,
         records={
-            {station=source.backer_name, wait_conditions={{type="time", compare_type="and", ticks=120}}},
-            {station=dest.backer_name, wait_conditions={{type="time", compare_type="and", ticks=120}}},
+            {station=tempstops[1].backer_name, wait_conditions={{type="time", compare_type="and", ticks=120}}},
+            {station=tempstops[2].backer_name, wait_conditions={{type="time", compare_type="and", ticks=120}}},
             {station=train.station.backer_name, wait_conditions={}}
         }
     }
@@ -94,6 +123,8 @@ function reset_train(train)
     end
 
     global.routes[routenum].trains[train.id] = train
+
+    destroy_temporary_stops(train.id)
 
     local x = {
         current=1,

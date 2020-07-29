@@ -5,6 +5,8 @@
 -- Add GUI buttons for creating new routes and deleting empty routes
 -- Figure out why blueprinting shared station names does weird things.  It's because the schedule is by-name but the routing is by-stop
 -- Add temporary stops
+-- Add train status tab that shows lack of fuel/garbage/other conditions
+-- Refine temporary stops — get rid of the overdraw, better naming convention, make them unblueprintable/undestroyable
 
 
 require("scripts.util")
@@ -20,6 +22,7 @@ script.on_init(function()
     global.stop_actions = {}  -- stopnum -> trainid -> {actions, pickup}  -- Actions pending for each stop
         -- actions is itemname -> amount
     global.train_lastactivity = {}  -- trainid -> tick  -- Time the train started to become idle
+    global.train_tempstops = {}  -- trainid -> {stopnum, ...}  -- Temporary stops created for that train
     global.stop_idletrain = {}  -- stopnum -> train  -- Train idling at each stop
     global.values = {}  -- stopnum -> itemname -> {have, want, coming}  -- Previous pass's values
     global.newvalues = {}  -- stopnum -> itemname -> {have, want, coming}  -- Current pass's values

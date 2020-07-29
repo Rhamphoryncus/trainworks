@@ -28,6 +28,20 @@ stop_recipe.result = "tw_stop"
 data:extend{stop, stop_item, stop_recipe}
 
 
+local tempstop = table.deepcopy(data.raw["train-stop"]["train-stop"])
+tempstop.name = "tw_temporary_stop"
+tempstop.collision_mask = nil
+tempstop.collision_box = nil
+tempstop.selection_box = nil
+--tempstop.minable = false
+
+local tempstop_item = table.deepcopy(data.raw.item["train-stop"])
+tempstop_item.name = "tw_temporary_stop"
+tempstop_item.place_result = "tw_temporary_stop"
+
+data:extend{tempstop, tempstop_item}
+
+
 local chest = table.deepcopy(data.raw.container["iron-chest"])
 chest.name = "tw_chest_horizontal"
 chest.inventory_size = 50
