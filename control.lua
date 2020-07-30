@@ -3,12 +3,15 @@
 -- Add profiling hooks
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
 -- Add GUI buttons for creating new routes and deleting empty routes
--- Figure out why blueprinting shared station names does weird things.  It's because the schedule is by-name but the routing is by-stop
 -- Add train status tab that shows lack of fuel/garbage/other conditions
 -- Rebalance weights
 -- Add provider/requester priorities to routes
 -- Add provider/requester priorities to stops
 -- reset_train should reset global.stop_actions and global.train_actions
+-- Clear global.stop_idletrain if a stop (or the train?) is removed
+-- Consider unifying train_actions and train_lastactivity into a trainstate table, maybe with an idlingatstop member
+-- Consider unifying the many stop members into a stopstate table
+-- Schedule cleanup of invalid trains if the GUI spots them
 
 
 require("scripts.util")
@@ -46,6 +49,8 @@ script.on_init(function()
 
     global.route_index = 1  -- Index number into global.route_jobs
     global.route_jobs = {}  -- {{handler, ...}, ...}  -- Array of tasks to be performed, one tick at a time
+
+    global.cleanup_trains = {}  -- trainid -> true  -- Trains that were destroyed and need to be untracked
 
     gui_initialize_players()
 end)
@@ -95,7 +100,7 @@ script.on_event({defines.events.on_train_changed_state},
         if train.state == defines.train_state.wait_station and e.old_state == defines.train_state.arrive_station then
             --log("Train in station: " .. train.station.backer_name)
             if train.station ~= nil and train.station.prototype.name == "tw_depot" then
-                reset_train(train)
+                reset_train(train.id, train)
             else
                 action_train(train)
             end

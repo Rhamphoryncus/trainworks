@@ -114,6 +114,16 @@ end
 
 
 tasks = {}
+function tasks.cleanup(task)
+    for trainid, train in pairs(global.cleanup_trains) do
+        reset_train(trainid, train)
+    end
+    global.cleanup_trains = {}
+
+    table.insert(global.route_jobs, {handler="copy_stopchests"})
+end
+
+
 function tasks.copy_stopchests(task)
     -- Make a copy of global.stopchests but in a dense array form
     for stopnum, x in pairs(global.stopchests) do
@@ -168,7 +178,7 @@ function process_routes()
         -- Reset and start a new pass
         global.route_index = 1
         global.route_jobs = {}
-        table.insert(global.route_jobs, {handler="copy_stopchests"})
+        table.insert(global.route_jobs, {handler="cleanup"})
     else
         --mod_gui.get_button_flow(game.players[1]).trainworks_top_button.caption = task.handler
         tasks[task.handler](task)

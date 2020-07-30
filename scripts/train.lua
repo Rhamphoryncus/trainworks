@@ -1,8 +1,9 @@
 -- Loading of trains and managing stops
 
 
-function train_is_idling(train)
+function train_is_idling(trainid, train)
     if not train.valid then
+        global.cleanup_trains[trainid] = train
         return false
     end
 
@@ -13,7 +14,7 @@ function train_is_idling(train)
         return false
     end
 
-    if global.train_lastactivity[train.id] > game.tick - 120 then
+    if global.train_lastactivity[trainid] > game.tick - 120 then
         return false
     end
 
@@ -47,7 +48,7 @@ end
 function dispatch_train(routenum, sourcenum, destnum, actions)
     local train = nil
     for maybetrainid, maybetrain in pairs(global.routes[routenum].trains) do
-        if train_is_idling(maybetrain) then
+        if train_is_idling(maybetrainid, maybetrain) then
             train = maybetrain
             break
         end
@@ -83,8 +84,21 @@ function dispatch_train(routenum, sourcenum, destnum, actions)
     log("Dispatched train " .. fstr(train.id) .. " from " .. source.backer_name .. " to " .. dest.backer_name)
 end
 
-function reset_train(train)
-    -- XXX FIXEME this should reset global.stop_actions and global.train_actions as well
+function reset_train(trainid, train)
+    if global.train_actions[trainid] ~= nil then
+        global.stop_actions[global.train_actions[trainid].src.unit_number][trainid] = nil  -- Delete the pickup action
+        global.stop_actions[global.train_actions[trainid].dest.unit_number][trainid] = nil  -- Delete the dropoff action
+        global.train_actions[trainid] = nil
+    end
+    if not train.valid then
+        global.train_lastactivity[trainid] = nil
+        -- XXX Looping here is a bit of a bodge
+        for routenum, x in pairs(global.routes) do
+            x.trains[trainid] = nil
+        end
+        return
+    end
+
     global.stop_idletrain[train.station.unit_number] = train
 
     local routenum = global.route_map[train.station.backer_name]
@@ -94,7 +108,7 @@ function reset_train(train)
         return
     end
 
-    global.routes[routenum].trains[train.id] = train
+    global.routes[routenum].trains[trainid] = train
 
     local x = {
         current=1,
@@ -104,8 +118,9 @@ function reset_train(train)
     }
     train.schedule = x
 
-    global.train_lastactivity[train.id] = game.tick
+    global.train_lastactivity[trainid] = game.tick
 end
+
 
 function transfer_inventories_balanced(invs, itemname, amount, extract)
     -- First pass, find out how much is already stored
