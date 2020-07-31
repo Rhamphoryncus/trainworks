@@ -77,8 +77,14 @@ end
 function populate_status(playernum)
     local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status
 
+    -- Tabs to select between routes or trains
+    local tabs = frame.add{type="tabbed-pane", name="trainworks_tabs"}
+    local routetab = tabs.add{type="tab", name="trainworks_routetab", caption={"gui.routetab"}}
+    local traintab = tabs.add{type="tab", name="trainworks_traintab", caption={"gui.traintab"}}
+
     -- List of routes to select from
-    local routepane = frame.add{type="scroll-pane", name="trainworks_routepane", vertical_scroll_policy="auto-and-reserve-space"}
+    local routepane = tabs.add{type="scroll-pane", name="trainworks_routepane", vertical_scroll_policy="auto-and-reserve-space"}
+    tabs.add_tab(routetab, routepane)
     local first = nil
     for routenum, route in pairs(global.routes) do
         routepane.add{type="radiobutton", name=("trainworks_route_"..routenum), state=(not first), caption=route.name}
@@ -97,6 +103,28 @@ function populate_status(playernum)
         select_route(playernum, first)
     end
 
+    -- Various trains servicing routes
+    local trainflow = tabs.add{type="flow", name="trainworks_trainflow", direction="vertical"}
+    tabs.add_tab(traintab, trainflow)
+    -- XXX FIXME radiobuttons at top: "All trains" and "Trains with issues"
+    -- Search box underneath to filter by route or train name.  Does train name have any value?
+    -- Scroll pane and radiobox underneath of the trains, updated by route.lua
+    local trainmodeflow = trainflow.add{type="flow", name="trainworks_trainmodeflow", direction="horizontal"}
+    local modeall = trainmodeflow.add{type="radiobutton", name="trainworks_trainmode_all", state=false, caption={"gui.trainmode_all"}}
+    local modeissues = trainmodeflow.add{type="radiobutton", name="trainworks_trainmode_issues", state=true, caption={"gui.trainmode_issues"}}
+    trainflow.add{type="textfield", name="trainworks_trainfilter", tooltip={"gui.trainfilter"}}
+    local trainpane = trainflow.add{type="scroll-pane", name="trainworks_trainpane", vertical_scroll_policy="auto-and-reserve-space"}
+    -- XXX FIXME list of trains
+    for routenum, x in pairs(global.routes) do
+        for trainid, train in pairs(x.trains) do
+            if not train.valid then
+                -- XXX FIXME add to cleanup
+            else
+                trainpane.add{type="radiobutton", name=("trainworks_train_"..trainid), state=false, caption=trainid}
+            end
+        end
+    end
+
     frame.visible = true
 end
 
@@ -109,7 +137,7 @@ end
 
 function select_route(playernum, routenum)
     -- Unset all the radiobuttons
-    local pane = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status.trainworks_routepane
+    local pane = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status.trainworks_tabs.trainworks_routepane
     for childname, child in pairs(pane.children) do
         child.state = false
     end
@@ -143,7 +171,7 @@ function populate_modify(playernum, routenum)
     flow.add{type="textfield", name="trainworks_modifyname", text=global.routes[routenum].name}
     local state = not not global.universal_routes[routenum]
     flow.add{type="checkbox", name="trainworks_toggleuniversal", state=state, caption={"gui.toggleuniversal"}}
-    flow.add{type="textfield", name="trainworks_modifyfilter"}
+    flow.add{type="textfield", name="trainworks_modifyfilter", tooltip={"gui.modifyfilter"}}
 
     -- List of stations that could be added to this route
     local toppane = flow.add{type="scroll-pane", name="trainworks_modifypane", vertical_scroll_policy="auto-and-reserve-space"}
