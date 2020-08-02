@@ -95,32 +95,46 @@ function populate_status(playernum)
     global.gui_routelist[playernum] = routepane
 
     -- Stops within the selected route
-    local flow = frame.add{type="flow", name="trainworks_stationflow", direction="vertical"}
-    flow.add{type="button", name="trainworks_showmodify", caption={"gui.showmodify"}}
-    local statuspane = flow.add{type="scroll-pane", name="trainworks_stationpane", vertical_scroll_policy="auto-and-reserve-space"}
+    -- XXX FIXME this should swap out for train status
+    local stationflow = frame.add{type="flow", name="trainworks_stationflow", direction="vertical"}
+    stationflow.add{type="button", name="trainworks_showmodify", caption={"gui.showmodify"}}
+    local statuspane = stationflow.add{type="scroll-pane", name="trainworks_stationpane", vertical_scroll_policy="auto-and-reserve-space"}
     global.gui_routestatus[playernum] = statuspane
     if first ~= nil then
         select_route(playernum, first)
     end
 
+    -- Detailed status of selected train
+    local trainflow = frame.add{type="flow", name="trainworks_trainflow", direction="vertical"}
+    trainflow.add{type="label", name="trainworks_train_cargo", caption="Test cargo"}
+    trainflow.add{type="label", name="trainworks_train_fullness", caption="Test fullness"}
+    trainflow.add{type="label", name="trainworks_train_position", caption="Test position"}
+    local minimap = trainflow.add{type="minimap", name="trainworks_train_minimap"}
+
     -- Various trains servicing routes
-    local trainflow = tabs.add{type="flow", name="trainworks_trainflow", direction="vertical"}
-    tabs.add_tab(traintab, trainflow)
+    local trainlistflow = tabs.add{type="flow", name="trainworks_trainlistflow", direction="vertical"}
+    tabs.add_tab(traintab, trainlistflow)
     -- XXX FIXME radiobuttons at top: "All trains" and "Trains with issues"
     -- Search box underneath to filter by route or train name.  Does train name have any value?
     -- Scroll pane and radiobox underneath of the trains, updated by route.lua
-    local trainmodeflow = trainflow.add{type="flow", name="trainworks_trainmodeflow", direction="horizontal"}
+    local trainmodeflow = trainlistflow.add{type="flow", name="trainworks_trainmodeflow", direction="horizontal"}
     local modeall = trainmodeflow.add{type="radiobutton", name="trainworks_trainmode_all", state=false, caption={"gui.trainmode_all"}}
     local modeissues = trainmodeflow.add{type="radiobutton", name="trainworks_trainmode_issues", state=true, caption={"gui.trainmode_issues"}}
-    trainflow.add{type="textfield", name="trainworks_trainfilter", tooltip={"gui.trainfilter"}}
-    local trainpane = trainflow.add{type="scroll-pane", name="trainworks_trainpane", vertical_scroll_policy="auto-and-reserve-space"}
+    trainlistflow.add{type="textfield", name="trainworks_trainfilter", tooltip={"gui.trainfilter"}}
+    local trainpane = trainlistflow.add{type="scroll-pane", name="trainworks_trainpane", vertical_scroll_policy="auto-and-reserve-space"}
+    local traintable = trainpane.add{type="table", name="trainworks_traintable", column_count=2}
     -- XXX FIXME list of trains
     for routenum, x in pairs(global.routes) do
+        local routename = global.routes[routenum].name
         for trainid, train in pairs(x.trains) do
             if not train.valid then
                 -- XXX FIXME add to cleanup
             else
-                trainpane.add{type="radiobutton", name=("trainworks_train_"..trainid), state=false, caption=trainid}
+                local caption={"gui.trainbutton", routename, trainid}
+                traintable.add{type="radiobutton", name=("trainworks_trainbutton_"..trainid), state=false, caption=caption}
+                traintable.add{type="label", name=("trainworks_trainlabel_"..trainid), caption="Test"}
+                minimap.position = train.locomotives.front_movers[1].position
+                minimap.surface_index = train.locomotives.front_movers[1].surface.index
             end
         end
     end
