@@ -219,39 +219,39 @@ end
 function populate_train_status(playernum)
     local flow = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status.trainworks_trainflow
 
-    local selectedid = global.gui_selected_train[playernum]
-    if selectedid ~= nil then
-        local selected = nil
+    local trainid = global.gui_selected_train[playernum]
+    if trainid ~= nil then
+        local train = nil
         -- XXX Find the train
         for routenum, x in pairs(global.routes) do
-            if x.trains[selectedid] ~= nil then
-                selected = x.trains[selectedid]
+            if x.trains[trainid] ~= nil then
+                train = x.trains[trainid]
                 break
             end
         end
 
-        if selected ~= nil then
+        if train ~= nil then
             local cargostring = ""
-            if selected.schedule.current == 1 then
-                local actions = global.train_actions[selectedid]
+            if train.schedule.current == 1 then
+                local actions = global.train_actions[trainid]
                 if actions ~= nil then
                     cargostring = "Intended: " .. generate_cargo_string(actions.actions)
                 else
                     cargostring = ""
                 end
-            elseif selected.schedule.current == 2 then
-                cargostring = generate_cargo_string(process_train_cargo(selected))
+            elseif train.schedule.current == 2 then
+                cargostring = generate_cargo_string(process_train_cargo(train))
             else
                 cargostring = ""
             end
             flow.trainworks_train_cargo.caption = cargostring
             flow.trainworks_train_fullness.caption = "Not 0"
 
-            local pos = selected.locomotives.front_movers[1].position
+            local pos = train.locomotives.front_movers[1].position
             flow.trainworks_train_position.caption = string.format("%i, %i", pos.x, pos.y)  -- This truncates rather than rounding to nearest.  Oh well.
         
             flow.trainworks_train_minimap.position = pos
-            flow.trainworks_train_minimap.surface_index = selected.locomotives.front_movers[1].surface.index
+            flow.trainworks_train_minimap.surface_index = train.locomotives.front_movers[1].surface.index
         end
     end
 end
