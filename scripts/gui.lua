@@ -100,9 +100,6 @@ function populate_status(playernum)
     stationflow.add{type="button", name="trainworks_showmodify", caption={"gui.showmodify"}}
     local statuspane = stationflow.add{type="scroll-pane", name="trainworks_stationpane", vertical_scroll_policy="auto-and-reserve-space"}
     global.gui_routestatus[playernum] = statuspane
-    if first ~= nil then
-        select_route(playernum, first)
-    end
 
     -- Detailed status of selected train
     local trainflow = frame.add{type="flow", name="trainworks_trainflow", direction="vertical"}
@@ -124,7 +121,11 @@ function populate_status(playernum)
     local trainpane = trainlistflow.add{type="scroll-pane", name="trainworks_trainpane", vertical_scroll_policy="auto-and-reserve-space"}
     local traintable = trainpane.add{type="table", name="trainworks_traintable", column_count=2}
     global.gui_traintable[playernum] = traintable
-    populate_trains(playernum)
+    populate_train_list(playernum)
+
+    if first ~= nil then
+        select_route(playernum, first)
+    end
 
     frame.visible = true
 end
@@ -137,8 +138,10 @@ function clear_status(playernum)
 end
 
 function select_route(playernum, routenum)
+    local status = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status
+
     -- Unset all the radiobuttons
-    local pane = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status.trainworks_tabs.trainworks_routepane
+    local pane = status.trainworks_tabs.trainworks_routepane
     for childname, child in pairs(pane.children) do
         child.state = false
     end
@@ -150,7 +153,10 @@ function select_route(playernum, routenum)
 
     -- Reset the active radiobutton
     if routenum ~= nil then
+        status.trainworks_stationflow.visible = true
+        status.trainworks_trainflow.visible = false
         pane[("trainworks_route_"..routenum)].state = true
+        select_train(playernum, nil)
     end
 end
 
@@ -168,19 +174,28 @@ function populate_stops_in_route(playernum, routenum)
 end
 
 function select_train(playernum, trainid)
+    local status = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status
+
     local traintable = global.gui_traintable[playernum]
     global.gui_selected_train[playernum] = trainid
+
+    if trainid ~= nil then
+        status.trainworks_stationflow.visible = false
+        status.trainworks_trainflow.visible = true
+
+        select_route(playernum, nil)
+    end
 end
 
-function populate_trains(playernum)
+function populate_train_list(playernum)
     local traintable = global.gui_traintable[playernum]
     local selectedid = global.gui_selected_train[playernum]
 
-    -- XXX FIXME clear first
-    select_route(playernum, nil)
+    -- Clear first
+    -- XXX Minor bug: if the player holds down the radiobutton that will get reset
     traintable.clear()
 
-    -- XXX FIXME list of trains
+    -- Then readd the list of trains
     for routenum, x in pairs(global.routes) do
         local routename = global.routes[routenum].name
         for trainid, train in pairs(x.trains) do
@@ -198,10 +213,10 @@ function populate_trains(playernum)
         end
     end
 
-    update_train_status(playernum)
+    populate_train_status(playernum)
 end
 
-function update_train_status(playernum)
+function populate_train_status(playernum)
     local flow = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status.trainworks_trainflow
 
     local selectedid = global.gui_selected_train[playernum]
@@ -216,12 +231,20 @@ function update_train_status(playernum)
         end
 
         if selected ~= nil then
-            local actions = global.train_actions[selectedid]
-            if actions ~= nil then
-                flow.trainworks_train_cargo.caption = "Intended: " .. fstr(actions.actions)
+            local cargostring = ""
+            if selected.schedule.current == 1 then
+                local actions = global.train_actions[selectedid]
+                if actions ~= nil then
+                    cargostring = "Intended: " .. generate_cargo_string(actions.actions)
+                else
+                    cargostring = ""
+                end
+            elseif selected.schedule.current == 2 then
+                cargostring = generate_cargo_string(process_train_cargo(selected))
             else
-                flow.trainworks_train_cargo.caption = ""
+                cargostring = ""
             end
+            flow.trainworks_train_cargo.caption = cargostring
             flow.trainworks_train_fullness.caption = "Not 0"
 
             local pos = selected.locomotives.front_movers[1].position
@@ -231,6 +254,27 @@ function update_train_status(playernum)
             flow.trainworks_train_minimap.surface_index = selected.locomotives.front_movers[1].surface.index
         end
     end
+end
+
+function process_train_cargo(train)
+    local contents = {}
+
+    for i, inv in pairs(get_train_inventories(train)) do
+        for itemname, count in pairs(inv.get_contents()) do
+            contents[itemname] = (contents[itemname] or 0) + count
+        end
+    end
+
+    return contents
+end
+
+function generate_cargo_string(contents)
+    local stuff = {}
+    for itemname, count in pairs(contents) do
+        table.insert(stuff, string.format("[item=%s]=%i", itemname, count))
+    end
+
+    return table.concat(stuff, ", ")
 end
 
 
@@ -335,7 +379,7 @@ end
 function update_gui()
     for playernum, player in pairs(game.players) do
         if mod_gui.get_frame_flow(player).trainworks_status.visible then
-            populate_trains(playernum)
+            populate_train_list(playernum)
         end
     end
 end
