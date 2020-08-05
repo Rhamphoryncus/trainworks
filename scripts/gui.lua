@@ -201,7 +201,7 @@ function populate_train_list(playernum)
         local routename = global.routes[routenum].name
         for trainid, train in pairs(x.trains) do
             if not train.valid then
-                -- XXX FIXME add to cleanup
+                global.cleanup_trains[trainid] = train
             elseif string.find(routename, filter, 1, true) == nil and string.find(tostring(trainid), filter, 1, true) == nil then
                 -- Skip this train
             else

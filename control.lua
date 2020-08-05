@@ -11,8 +11,6 @@
 -- Clear global.stop_idletrain if a stop (or the train?) is removed
 -- Consider unifying train_actions and train_lastactivity into a trainstate table, maybe with an idlingatstop member
 -- Consider unifying the many stop members into a stopstate table
--- Schedule cleanup of invalid trains if the GUI spots them
--- Refresh train list GUI on every route cycle.  Add tracking of open track list GUIs to do it
 -- GUI radiobutton event needs to clear other route/train radiobuttons and only select the clicked one
 
 
