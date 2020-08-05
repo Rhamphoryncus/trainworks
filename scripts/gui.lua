@@ -188,6 +188,7 @@ function select_train(playernum, trainid)
 end
 
 function populate_train_list(playernum)
+    local filter = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status.trainworks_tabs.trainworks_trainlistflow.trainworks_trainfilter.text
     local traintable = global.gui_traintable[playernum]
     local selectedid = global.gui_selected_train[playernum]
 
@@ -201,6 +202,8 @@ function populate_train_list(playernum)
         for trainid, train in pairs(x.trains) do
             if not train.valid then
                 -- XXX FIXME add to cleanup
+            elseif string.find(routename, filter, 1, true) == nil and string.find(tostring(trainid), filter, 1, true) == nil then
+                -- Skip this train
             else
                 local caption={"gui.trainbutton", routename, trainid}
                 local state = false
