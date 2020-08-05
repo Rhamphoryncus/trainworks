@@ -12,6 +12,8 @@
 -- Consider unifying train_actions and train_lastactivity into a trainstate table, maybe with an idlingatstop member
 -- Consider unifying the many stop members into a stopstate table
 -- Schedule cleanup of invalid trains if the GUI spots them
+-- Refresh train list GUI on every route cycle.  Add tracking of open track list GUIs to do it
+-- GUI radiobutton event needs to clear other route/train radiobuttons and only select the clicked one
 
 
 require("scripts.util")
@@ -46,6 +48,8 @@ script.on_init(function()
     global.gui_routelist = {}  -- playernum -> guielement
     global.gui_routestatus = {}  -- playernum -> guielement
     global.gui_routemodify = {}  -- playernum -> guielement
+    global.gui_selected_train = {}  -- playernum -> trainid
+    global.gui_traintable = {}  -- playernum -> guielement
 
     global.route_index = 1  -- Index number into global.route_jobs
     global.route_jobs = {}  -- {{handler, ...}, ...}  -- Array of tasks to be performed, one tick at a time

@@ -271,4 +271,11 @@ function tasks.service_route_requests(task)
             end
         end
     end
+
+    table.insert(global.route_jobs, {handler="update_gui"})
+end
+
+
+function tasks.update_gui(task)
+    update_gui()
 end

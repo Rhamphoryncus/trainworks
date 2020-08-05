@@ -123,21 +123,8 @@ function populate_status(playernum)
     trainlistflow.add{type="textfield", name="trainworks_trainfilter", tooltip={"gui.trainfilter"}}
     local trainpane = trainlistflow.add{type="scroll-pane", name="trainworks_trainpane", vertical_scroll_policy="auto-and-reserve-space"}
     local traintable = trainpane.add{type="table", name="trainworks_traintable", column_count=2}
-    -- XXX FIXME list of trains
-    for routenum, x in pairs(global.routes) do
-        local routename = global.routes[routenum].name
-        for trainid, train in pairs(x.trains) do
-            if not train.valid then
-                -- XXX FIXME add to cleanup
-            else
-                local caption={"gui.trainbutton", routename, trainid}
-                traintable.add{type="radiobutton", name=("trainworks_trainbutton_"..trainid), state=false, caption=caption}
-                traintable.add{type="label", name=("trainworks_trainlabel_"..trainid), caption="Test"}
-                minimap.position = train.locomotives.front_movers[1].position
-                minimap.surface_index = train.locomotives.front_movers[1].surface.index
-            end
-        end
-    end
+    global.gui_traintable[playernum] = traintable
+    populate_trains(playernum)
 
     frame.visible = true
 end
@@ -162,7 +149,9 @@ function select_route(playernum, routenum)
     populate_stops_in_route(playernum, routenum)
 
     -- Reset the active radiobutton
-    pane[("trainworks_route_"..routenum)].state = true
+    if routenum ~= nil then
+        pane[("trainworks_route_"..routenum)].state = true
+    end
 end
 
 function populate_stops_in_route(playernum, routenum)
@@ -174,6 +163,72 @@ function populate_stops_in_route(playernum, routenum)
         for stopnum, x in pairs(get_route_stops(routenum)) do
             local name = "label_"..tostring(stopnum)
             pane.add{type="label", name=name, caption=get_backer_name(stopnum)}
+        end
+    end
+end
+
+function select_train(playernum, trainid)
+    local traintable = global.gui_traintable[playernum]
+    global.gui_selected_train[playernum] = trainid
+end
+
+function populate_trains(playernum)
+    local traintable = global.gui_traintable[playernum]
+    local selectedid = global.gui_selected_train[playernum]
+
+    -- XXX FIXME clear first
+    select_route(playernum, nil)
+    traintable.clear()
+
+    -- XXX FIXME list of trains
+    for routenum, x in pairs(global.routes) do
+        local routename = global.routes[routenum].name
+        for trainid, train in pairs(x.trains) do
+            if not train.valid then
+                -- XXX FIXME add to cleanup
+            else
+                local caption={"gui.trainbutton", routename, trainid}
+                local state = false
+                if trainid == selectedid then
+                    state = true
+                end
+                traintable.add{type="radiobutton", name=("trainworks_trainbutton_"..trainid), state=state, caption=caption}
+                traintable.add{type="label", name=("trainworks_trainlabel_"..trainid), caption="Test"}
+            end
+        end
+    end
+
+    update_train_status(playernum)
+end
+
+function update_train_status(playernum)
+    local flow = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status.trainworks_trainflow
+
+    local selectedid = global.gui_selected_train[playernum]
+    if selectedid ~= nil then
+        local selected = nil
+        -- XXX Find the train
+        for routenum, x in pairs(global.routes) do
+            if x.trains[selectedid] ~= nil then
+                selected = x.trains[selectedid]
+                break
+            end
+        end
+
+        if selected ~= nil then
+            local actions = global.train_actions[selectedid]
+            if actions ~= nil then
+                flow.trainworks_train_cargo.caption = "Intended: " .. fstr(actions.actions)
+            else
+                flow.trainworks_train_cargo.caption = ""
+            end
+            flow.trainworks_train_fullness.caption = "Not 0"
+
+            local pos = selected.locomotives.front_movers[1].position
+            flow.trainworks_train_position.caption = string.format("%i, %i", pos.x, pos.y)  -- This truncates rather than rounding to nearest.  Oh well.
+        
+            flow.trainworks_train_minimap.position = pos
+            flow.trainworks_train_minimap.surface_index = selected.locomotives.front_movers[1].surface.index
         end
     end
 end
@@ -277,6 +332,15 @@ function deactivate_universal(routenum)
 end
 
 
+function update_gui()
+    for playernum, player in pairs(game.players) do
+        if mod_gui.get_frame_flow(player).trainworks_status.visible then
+            populate_trains(playernum)
+        end
+    end
+end
+
+
 script.on_event({defines.events.on_gui_click},
     function (e)
         local player = game.players[e.player_index]
@@ -291,6 +355,9 @@ script.on_event({defines.events.on_gui_click},
         elseif e.element.name:match("^trainworks_route_") then
             local routenum = tonumber(e.element.name:match("^trainworks_route_(.*)$"))
             select_route(e.player_index, routenum)
+        elseif e.element.name:match("^trainworks_trainbutton_") then
+            local trainid = tonumber(e.element.name:match("^trainworks_trainbutton_(.*)$"))
+            select_train(e.player_index, trainid)
         elseif e.element.name == "trainworks_showmodify" then
             local routenum = global.gui_selected_route[e.player_index]
             local frame = mod_gui.get_frame_flow(player).trainworks_modify
