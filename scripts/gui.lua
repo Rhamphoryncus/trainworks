@@ -236,9 +236,9 @@ function populate_train_status(playernum)
         if train ~= nil then
             local cargostring = ""
             if train.schedule.current == 1 then
-                local actions = global.train_actions[trainid]
+                local actions = global.train_actions[trainid].actions
                 if actions ~= nil then
-                    cargostring = "Intended: " .. generate_cargo_string(actions.actions)
+                    cargostring = "Intended: " .. generate_cargo_string(actions)
                 else
                     cargostring = ""
                 end

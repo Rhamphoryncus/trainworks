@@ -78,7 +78,12 @@ function dispatch_train(routenum, sourcenum, destnum, actions)
     train.schedule = x
 
     global.train_lastactivity[train.id] = nil
-    global.train_actions[train.id] = {src=source, dest=dest, actions=actions}
+    if global.train_actions[train.id] == nil then
+        global.train_actions[train.id] = {}
+    end
+    global.train_actions[train.id].src = source
+    global.train_actions[train.id].dest = dest
+    global.train_actions[train.id].actions = actions
     global.stop_actions[source.unit_number][train.id] = {actions=actions, pickup=true}
     global.stop_actions[dest.unit_number][train.id] = {actions=actions, pickup=false}
     log("Dispatched train " .. fstr(train.id) .. " from " .. source.backer_name .. " to " .. dest.backer_name)
@@ -86,9 +91,15 @@ end
 
 function reset_train(trainid, train)
     if global.train_actions[trainid] ~= nil then
-        global.stop_actions[global.train_actions[trainid].src.unit_number][trainid] = nil  -- Delete the pickup action
-        global.stop_actions[global.train_actions[trainid].dest.unit_number][trainid] = nil  -- Delete the dropoff action
-        global.train_actions[trainid] = nil
+        if global.train_actions[trainid].src ~= nil then
+            global.stop_actions[global.train_actions[trainid].src.unit_number][trainid] = nil  -- Delete the pickup action
+        end
+        if global.train_actions[trainid].dest ~= nil then
+            global.stop_actions[global.train_actions[trainid].dest.unit_number][trainid] = nil  -- Delete the dropoff action
+        end
+        global.train_actions[trainid].src = nil
+        global.train_actions[trainid].dest = nil
+        global.train_actions[trainid].actions = nil
     end
     if not train.valid then
         global.train_lastactivity[trainid] = nil
@@ -232,7 +243,6 @@ function action_train(train)
         global.stopchests[action.dest.unit_number].last_activity = game.tick
 
         global.stop_actions[action.dest.unit_number][train.id] = nil  -- Delete the dropoff action
-        global.train_actions[train.id] = nil
     end
 end
 

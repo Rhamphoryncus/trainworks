@@ -12,6 +12,8 @@
 -- Consider unifying train_actions and train_lastactivity into a trainstate table, maybe with an idlingatstop member
 -- Consider unifying the many stop members into a stopstate table
 -- GUI radiobutton event needs to clear other route/train radiobuttons and only select the clicked one
+-- Handle migration/reset parts of the mod on version changes
+-- Rename tw_ prototype prefix to trainworks_
 
 
 require("scripts.util")
@@ -22,7 +24,9 @@ require("scripts.gui")
 
 script.on_init(function()
     global.stopchests = {}  -- stopnum -> {stop, chests, last_activity}  -- The chests belonging to each stop
-    global.train_actions = {}  -- trainid -> {source, dest, actions}  -- Trains in progress
+    global.train_actions = {}  -- trainid -> {src, dest, actions}  -- Trains in progress
+        -- src is stop  -- Pickup station
+        -- dest is stop  -- Dropoff station
         -- actions is itemname -> amount
     global.stop_actions = {}  -- stopnum -> trainid -> {actions, pickup}  -- Actions pending for each stop
         -- actions is itemname -> amount
