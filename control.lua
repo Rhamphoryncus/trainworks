@@ -24,7 +24,8 @@ require("scripts.gui")
 
 script.on_init(function()
     global.stopchests = {}  -- stopnum -> {stop, chests, last_activity}  -- The chests belonging to each stop
-    global.train_actions = {}  -- trainid -> {src, dest, actions}  -- Trains in progress
+    global.trains = {}  -- trainid -> {train, src, dest, actions}  -- Trains in progress
+        -- train is train  -- Underlying train handle
         -- src is stop  -- Pickup station
         -- dest is stop  -- Dropoff station
         -- actions is itemname -> amount

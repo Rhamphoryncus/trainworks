@@ -78,28 +78,27 @@ function dispatch_train(routenum, sourcenum, destnum, actions)
     train.schedule = x
 
     global.train_lastactivity[train.id] = nil
-    if global.train_actions[train.id] == nil then
-        global.train_actions[train.id] = {}
-    end
-    global.train_actions[train.id].src = source
-    global.train_actions[train.id].dest = dest
-    global.train_actions[train.id].actions = actions
+    global.trains[train.id].src = source
+    global.trains[train.id].dest = dest
+    global.trains[train.id].actions = actions
     global.stop_actions[source.unit_number][train.id] = {actions=actions, pickup=true}
     global.stop_actions[dest.unit_number][train.id] = {actions=actions, pickup=false}
     log("Dispatched train " .. fstr(train.id) .. " from " .. source.backer_name .. " to " .. dest.backer_name)
 end
 
 function reset_train(trainid, train)
-    if global.train_actions[trainid] ~= nil then
-        if global.train_actions[trainid].src ~= nil then
-            global.stop_actions[global.train_actions[trainid].src.unit_number][trainid] = nil  -- Delete the pickup action
+    if global.trains[trainid] == nil then
+        global.trains[trainid] = {train=train}
+    else
+        if global.trains[trainid].src ~= nil then
+            global.stop_actions[global.trains[trainid].src.unit_number][trainid] = nil  -- Delete the pickup action
         end
-        if global.train_actions[trainid].dest ~= nil then
-            global.stop_actions[global.train_actions[trainid].dest.unit_number][trainid] = nil  -- Delete the dropoff action
+        if global.trains[trainid].dest ~= nil then
+            global.stop_actions[global.trains[trainid].dest.unit_number][trainid] = nil  -- Delete the dropoff action
         end
-        global.train_actions[trainid].src = nil
-        global.train_actions[trainid].dest = nil
-        global.train_actions[trainid].actions = nil
+        global.trains[trainid].src = nil
+        global.trains[trainid].dest = nil
+        global.trains[trainid].actions = nil
     end
     if not train.valid then
         global.train_lastactivity[trainid] = nil
@@ -227,7 +226,7 @@ end
 
 function action_train(train)
     -- Load/unload the train as it arrives at a station
-    local action = global.train_actions[train.id]
+    local action = global.trains[train.id]
     log("Carriages: " .. fstr(train.carriages))
     log("Schedule index: " .. fstr(train.schedule.current))
 
