@@ -243,7 +243,7 @@ function populate_train_status(playernum)
                     cargostring = ""
                 end
             elseif train.schedule.current == 2 then
-                cargostring = generate_cargo_string(process_train_cargo(train))
+                cargostring = generate_cargo_string(merge_inventories(get_train_inventories(train)))
             else
                 cargostring = ""
             end
@@ -257,18 +257,6 @@ function populate_train_status(playernum)
             flow.trainworks_train_minimap.surface_index = train.locomotives.front_movers[1].surface.index
         end
     end
-end
-
-function process_train_cargo(train)
-    local contents = {}
-
-    for i, inv in pairs(get_train_inventories(train)) do
-        for itemname, count in pairs(inv.get_contents()) do
-            contents[itemname] = (contents[itemname] or 0) + count
-        end
-    end
-
-    return contents
 end
 
 function generate_cargo_string(contents)

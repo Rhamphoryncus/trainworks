@@ -7,11 +7,7 @@
 -- Rebalance weights
 -- Add provider/requester priorities to routes
 -- Add provider/requester priorities to stops
--- reset_train should reset global.stop_actions and global.train_actions
--- Clear global.stop_idletrain if a stop (or the train?) is removed
--- Consider unifying train_actions and train_lastactivity into a trainstate table, maybe with an idlingatstop member
 -- Consider unifying the many stop members into a stopstate table
--- GUI radiobutton event needs to clear other route/train radiobuttons and only select the clicked one
 -- Handle migration/reset parts of the mod on version changes
 -- Rename tw_ prototype prefix to trainworks_
 
@@ -24,14 +20,15 @@ require("scripts.gui")
 
 script.on_init(function()
     global.stopchests = {}  -- stopnum -> {stop, chests, last_activity}  -- The chests belonging to each stop
-    global.trains = {}  -- trainid -> {train, src, dest, actions}  -- Trains in progress
+    global.trains = {}  -- trainid -> {train, src, dest, actions, last_fuel, last_activity}  -- Trains in progress
         -- train is train  -- Underlying train handle
         -- src is stop  -- Pickup station
         -- dest is stop  -- Dropoff station
         -- actions is itemname -> amount
+        -- last_fuel is itemname -> amount  -- Amount of fuel on locomotives last time we looked
+        -- last_activity is tick  -- Game tick when we last loaded fuel
     global.stop_actions = {}  -- stopnum -> trainid -> {actions, pickup}  -- Actions pending for each stop
         -- actions is itemname -> amount
-    global.train_lastactivity = {}  -- trainid -> tick  -- Time the train started to become idle
     global.stop_idletrain = {}  -- stopnum -> train  -- Train idling at each stop
     global.values = {}  -- stopnum -> itemname -> {have, want, coming}  -- Previous pass's values
     global.newvalues = {}  -- stopnum -> itemname -> {have, want, coming}  -- Current pass's values

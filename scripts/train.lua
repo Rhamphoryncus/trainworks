@@ -14,7 +14,14 @@ function train_is_idling(trainid, train)
         return false
     end
 
-    if global.train_lastactivity[trainid] > game.tick - 120 then
+    -- XXX Minor bug: last_fuel doesn't get updated when there isn't a job being dispatched.  However, this is harmless so long as fuel is always being maintained as full, which is the normal case.
+    local fuel = merge_inventories(get_train_fuels(train))
+    if global.trains[trainid].last_fuel == nil or not compare_dictionaries(fuel, global.trains[trainid].last_fuel) then
+        global.trains[trainid].last_fuel = fuel
+        global.trains[trainid].last_activity = game.tick
+        return false
+    end
+    if global.trains[trainid].last_activity > game.tick - 120 then
         return false
     end
 
@@ -77,7 +84,6 @@ function dispatch_train(routenum, sourcenum, destnum, actions)
     }
     train.schedule = x
 
-    global.train_lastactivity[train.id] = nil
     global.trains[train.id].src = source
     global.trains[train.id].dest = dest
     global.trains[train.id].actions = actions
@@ -101,11 +107,11 @@ function reset_train(trainid, train)
         global.trains[trainid].actions = nil
     end
     if not train.valid then
-        global.train_lastactivity[trainid] = nil
         -- XXX Looping here is a bit of a bodge
         for routenum, x in pairs(global.routes) do
             x.trains[trainid] = nil
         end
+        global.trains[trainid] = nil
         return
     end
 
@@ -128,7 +134,7 @@ function reset_train(trainid, train)
     }
     train.schedule = x
 
-    global.train_lastactivity[trainid] = game.tick
+    global.trains[trainid].last_activity = game.tick
 end
 
 
@@ -222,6 +228,29 @@ function get_train_inventories(train)
         table.insert(invs, wagon.get_inventory(defines.inventory.cargo_wagon))
     end
     return invs
+end
+
+function get_train_fuels(train)
+    local invs = {}
+    for i, wagon in pairs(train.locomotives.front_movers) do
+        table.insert(invs, wagon.get_inventory(defines.inventory.fuel))
+    end
+    for i, wagon in pairs(train.locomotives.back_movers) do
+        table.insert(invs, wagon.get_inventory(defines.inventory.fuel))
+    end
+    return invs
+end
+
+function merge_inventories(invs)
+    local contents = {}
+
+    for i, inv in pairs(invs) do
+        for itemname, count in pairs(inv.get_contents()) do
+            contents[itemname] = (contents[itemname] or 0) + count
+        end
+    end
+
+    return contents
 end
 
 function action_train(train)
