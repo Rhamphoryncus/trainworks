@@ -188,7 +188,9 @@ function select_train(playernum, trainid)
 end
 
 function populate_train_list(playernum)
-    local filter = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status.trainworks_tabs.trainworks_trainlistflow.trainworks_trainfilter.text
+    local trainlistflow = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status.trainworks_tabs.trainworks_trainlistflow
+    local filter = trainlistflow.trainworks_trainfilter.text
+    local issuesmode = trainlistflow.trainworks_trainmodeflow.trainworks_trainmode_issues.state
     local traintable = global.gui_traintable[playernum]
     local selectedid = global.gui_selected_train[playernum]
 
@@ -200,9 +202,22 @@ function populate_train_list(playernum)
     for routenum, x in pairs(global.routes) do
         local routename = global.routes[routenum].name
         for trainid, train in pairs(x.trains) do
+            local status = ""
+            local issue = false
+            if train_status_garbage(trainid, train) then
+                status = {"gui.train_status_garbage"}
+                issue = true
+            elseif train_status_error(trainid, train) then
+                issue, status = train_status_error(trainid, train)
+            elseif train_status_refueling(trainid, train) then  -- XXX Minor bug: updates idle time as a side effect
+                status = {"gui.train_status_refueling"}
+            end
+
             if not train.valid then
                 global.cleanup_trains[trainid] = train
             elseif string.find(routename, filter, 1, true) == nil and string.find(tostring(trainid), filter, 1, true) == nil then
+                -- Skip this train
+            elseif issuesmode and not issue then
                 -- Skip this train
             else
                 local caption={"gui.trainbutton", routename, trainid}
@@ -211,7 +226,7 @@ function populate_train_list(playernum)
                     state = true
                 end
                 traintable.add{type="radiobutton", name=("trainworks_trainbutton_"..trainid), state=state, caption=caption}
-                traintable.add{type="label", name=("trainworks_trainlabel_"..trainid), caption="Test"}
+                traintable.add{type="label", name=("trainworks_trainlabel_"..trainid), caption=status}
             end
         end
     end
@@ -393,6 +408,10 @@ script.on_event({defines.events.on_gui_click},
         elseif e.element.name:match("^trainworks_trainbutton_") then
             local trainid = tonumber(e.element.name:match("^trainworks_trainbutton_(.*)$"))
             select_train(e.player_index, trainid)
+        elseif e.element.name == "trainworks_trainmode_all" then
+            e.element.parent.trainworks_trainmode_issues.state = false
+        elseif e.element.name == "trainworks_trainmode_issues" then
+            e.element.parent.trainworks_trainmode_all.state = false
         elseif e.element.name == "trainworks_showmodify" then
             local routenum = global.gui_selected_route[e.player_index]
             local frame = mod_gui.get_frame_flow(player).trainworks_modify
@@ -425,7 +444,7 @@ script.on_event({defines.events.on_gui_click},
 
 script.on_event({defines.events.on_gui_text_changed},
     function (e)
-        game.print("Text changed by " .. fstr(e.player_index) .. ": " .. fstr(e.element.text))
+        --game.print("Text changed by " .. fstr(e.player_index) .. ": " .. fstr(e.element.text))
     end
 )
 

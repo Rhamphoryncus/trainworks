@@ -1,6 +1,75 @@
 -- Loading of trains and managing stops
 
 
+function train_status_refueling(trainid, train)
+    -- XXX Minor bug: last_fuel doesn't get updated when there isn't a job being dispatched.  However, this is harmless so long as fuel is always being maintained as full, which is the normal case.
+    if train.state ~= defines.train_state.wait_station
+            or train.station == nil
+            or train.station.prototype.name ~= "tw_depot"
+            then
+        return false
+    end
+
+    local fuel = merge_inventories(get_train_fuels(train))
+    if global.trains[trainid].last_fuel == nil or not compare_dictionaries(fuel, global.trains[trainid].last_fuel) then
+        global.trains[trainid].last_fuel = fuel
+        global.trains[trainid].last_activity = game.tick
+        return true
+    end
+
+    if global.trains[trainid].last_activity > game.tick - 120 then
+        return true
+    end
+
+    for x, loco in pairs(train.locomotives.front_movers) do
+        local inv = loco.get_inventory(defines.inventory.fuel)
+        local empty = inv.count_empty_stacks{include_filtered=true}
+        if empty > 0 then
+            return true
+        end
+    end
+
+    for x, loco in pairs(train.locomotives.back_movers) do
+        local inv = loco.get_inventory(defines.inventory.fuel)
+        local empty = inv.count_empty_stacks{include_filtered=true}
+        if empty > 0 then
+            return true
+        end
+    end
+
+    return false
+end
+
+function train_status_garbage(trainid, train)
+    if train.state ~= defines.train_state.wait_station
+            or train.station == nil
+            or train.station.prototype.name ~= "tw_depot"
+            then
+        return false
+    end
+
+    for x, wagon in pairs(train.cargo_wagons) do
+        local inv = wagon.get_inventory(defines.inventory.cargo_wagon)
+        if not inv.is_empty() then
+            return true
+        end
+    end
+
+    return false
+end
+
+function train_status_error(trainid, train)
+    if train.state == defines.train_state.no_path then
+        return true, {"gui.train_status_no_path"}
+    elseif train.state == defines.train_state.no_schedule then
+        return true, {"gui.train_status_no_schedule"}
+    elseif train.state == defines.train_state.manual_control or train.state == defines.train_state_manual_control_stop then
+        return true, {"gui.train_status_manual"}
+    else
+        return false
+    end
+end
+
 function train_is_idling(trainid, train)
     if not train.valid then
         global.cleanup_trains[trainid] = train
@@ -14,38 +83,12 @@ function train_is_idling(trainid, train)
         return false
     end
 
-    -- XXX Minor bug: last_fuel doesn't get updated when there isn't a job being dispatched.  However, this is harmless so long as fuel is always being maintained as full, which is the normal case.
-    local fuel = merge_inventories(get_train_fuels(train))
-    if global.trains[trainid].last_fuel == nil or not compare_dictionaries(fuel, global.trains[trainid].last_fuel) then
-        global.trains[trainid].last_fuel = fuel
-        global.trains[trainid].last_activity = game.tick
-        return false
-    end
-    if global.trains[trainid].last_activity > game.tick - 120 then
+    if train_status_refueling(trainid, train) then
         return false
     end
 
-    for x, loco in pairs(train.locomotives.front_movers) do
-        local inv = loco.get_inventory(defines.inventory.fuel)
-        local empty = inv.count_empty_stacks{include_filtered=true}
-        if empty > 0 then
-            return false
-        end
-    end
-
-    for x, loco in pairs(train.locomotives.back_movers) do
-        local inv = loco.get_inventory(defines.inventory.fuel)
-        local empty = inv.count_empty_stacks{include_filtered=true}
-        if empty > 0 then
-            return false
-        end
-    end
-
-    for x, wagon in pairs(train.cargo_wagons) do
-        local inv = wagon.get_inventory(defines.inventory.cargo_wagon)
-        if not inv.is_empty() then
-            return false
-        end
+    if train_status_garbage(trainid, train) then
+        return false
     end
 
     return true
