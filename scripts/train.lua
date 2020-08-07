@@ -5,7 +5,7 @@ function train_status_refueling(trainid, train)
     -- XXX Minor bug: last_fuel doesn't get updated when there isn't a job being dispatched.  However, this is harmless so long as fuel is always being maintained as full, which is the normal case.
     if train.state ~= defines.train_state.wait_station
             or train.station == nil
-            or train.station.prototype.name ~= "tw_depot"
+            or train.station.prototype.name ~= "trainworks_depot"
             then
         return false
     end
@@ -43,7 +43,7 @@ end
 function train_status_garbage(trainid, train)
     if train.state ~= defines.train_state.wait_station
             or train.station == nil
-            or train.station.prototype.name ~= "tw_depot"
+            or train.station.prototype.name ~= "trainworks_depot"
             then
         return false
     end
@@ -78,7 +78,7 @@ function train_is_idling(trainid, train)
 
     if train.state ~= defines.train_state.wait_station
             or train.station == nil
-            or train.station.prototype.name ~= "tw_depot"
+            or train.station.prototype.name ~= "trainworks_depot"
             then
         return false
     end
@@ -318,8 +318,8 @@ end
 
 
 valid_container_types = {
-    tw_chest_horizontal = true,
-    tw_chest_vertical = true
+    trainworks_chest_horizontal = true,
+    trainworks_chest_vertical = true
 }
 
 
@@ -469,14 +469,14 @@ function register_chest(chest)
     local stops = nil
 
     -- XXX FIXME generalize this for future expansion, such as bot logistic chests
-    if chest.name == "tw_chest_horizontal" then
+    if chest.name == "trainworks_chest_horizontal" then
         stops = {
             search_for_stop_same(chest.surface, chest.position, defines.direction.east),
             search_for_stop_same(chest.surface, chest.position, defines.direction.west),
             search_for_stop_opposite(chest.surface, chest.position, defines.direction.east),
             search_for_stop_opposite(chest.surface, chest.position, defines.direction.west)
         }
-    elseif chest.name == "tw_chest_vertical" then
+    elseif chest.name == "trainworks_chest_vertical" then
         stops = {
             search_for_stop_same(chest.surface, chest.position, defines.direction.north),
             search_for_stop_same(chest.surface, chest.position, defines.direction.south),
@@ -494,7 +494,7 @@ end
 
 script.on_event({defines.events.on_entity_renamed},
     function (e)
-        if e.entity.prototype.name == "tw_depot" then
+        if e.entity.prototype.name == "trainworks_depot" then
             local train = global.depot_idletrain[e.entity.unit_number]
 
             if train ~= nil and train.state == defines.train_state.wait_station and train.station == e.entity then

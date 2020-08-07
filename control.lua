@@ -6,7 +6,6 @@
 -- Rebalance weights
 -- Add provider/requester priorities to routes
 -- Add provider/requester priorities to stops
--- Consider unifying the many stop members into a stopstate table
 -- Handle migration/reset parts of the mod on version changes
 -- Rename tw_ prototype prefix to trainworks_
 -- Make stopchest's last_activity be per-typename
@@ -80,21 +79,21 @@ script.on_event({defines.events.on_tick},
 
 
 function handle_built_event(ent)
-    if ent.name == "tw_depot" then
+    if ent.name == "trainworks_depot" then
         -- XXX temporary bodge until I have a proper GUI
         local routenum = global.route_counter
         global.route_counter = global.route_counter + 1
         global.routes[routenum] = {name=ent.backer_name, trains={}, stops={}, provided={}, requested={}}
         global.route_map[ent.backer_name] = routenum
         global.universal_routes[routenum] = true
-    elseif ent.name == "tw_stop" then
+    elseif ent.name == "trainworks_stop" then
         local control = ent.get_or_create_control_behavior()
         control.send_to_train = false
         find_stop_chests(ent)
     elseif ent.name == "locomotive" then
-    elseif ent.name == "tw_chest_horizontal" then
+    elseif ent.name == "trainworks_chest_horizontal" then
         register_chest(ent)
-    elseif ent.name == "tw_chest_vertical" then
+    elseif ent.name == "trainworks_chest_vertical" then
         register_chest(ent)
     end
 end
@@ -110,7 +109,7 @@ script.on_event({defines.events.on_train_changed_state},
         local train = e.train
         -- XXX FIXME this should only respond to trains that have joined a depot
         if train.state == defines.train_state.wait_station and e.old_state == defines.train_state.arrive_station then
-            if train.station ~= nil and train.station.prototype.name == "tw_depot" then
+            if train.station ~= nil and train.station.prototype.name == "trainworks_depot" then
                 reset_train(train.id, train)
             else
                 action_train(train)
