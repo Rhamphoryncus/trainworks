@@ -3,7 +3,6 @@
 -- Add profiling hooks
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
 -- Add GUI buttons for creating new routes and deleting empty routes
--- Add train status tab that shows lack of fuel/garbage/other conditions
 -- Rebalance weights
 -- Add provider/requester priorities to routes
 -- Add provider/requester priorities to stops

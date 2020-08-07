@@ -91,6 +91,10 @@ function train_is_idling(trainid, train)
         return false
     end
 
+    if train_status_error(trainid, train) then
+        return false
+    end
+
     return true
 end
 
