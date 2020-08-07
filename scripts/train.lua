@@ -64,7 +64,6 @@ function dispatch_train(routenum, sourcenum, destnum, actions)
         -- No train available
         return
     end
-    log("Found depoted train: " .. fstr(train.state) .. " at " .. train.station.backer_name)
 
     global.stop_idletrain[train.station.unit_number] = nil
 
@@ -89,7 +88,6 @@ function dispatch_train(routenum, sourcenum, destnum, actions)
     global.trains[train.id].actions = actions
     global.stop_actions[source.unit_number][train.id] = {actions=actions, pickup=true}
     global.stop_actions[dest.unit_number][train.id] = {actions=actions, pickup=false}
-    log("Dispatched train " .. fstr(train.id) .. " from " .. source.backer_name .. " to " .. dest.backer_name)
 end
 
 function reset_train(trainid, train)
@@ -200,11 +198,10 @@ function transfer_inventories(src, dest, actions)
             local inserted = transfer_inventories_balanced(dest, itemname, removed, false)
             local bounce = removed - inserted
             if bounce > 0 then
-                log("Bounce: " .. fstr(bounce))
                 local bounced = transfer_inventories_balanced(src, itemname, bounce, false)
                 if bounce ~= bounced then
                     -- XXX print an error to console.  This might happen if a user applies filters or a bar to a chest/wagon
-                    log("Unable to bounce, items deleted!")
+                    game.print("Unable to bounce, items deleted!  " .. itemname .. "=" ..tostring(bounce-bounced))
                 end
             end
         end
@@ -256,8 +253,6 @@ end
 function action_train(train)
     -- Load/unload the train as it arrives at a station
     local action = global.trains[train.id]
-    log("Carriages: " .. fstr(train.carriages))
-    log("Schedule index: " .. fstr(train.schedule.current))
 
     if train.schedule.current == 1 then
         -- Load

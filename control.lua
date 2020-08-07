@@ -70,7 +70,6 @@ script.on_event({defines.events.on_tick},
 
 
 function handle_built_event(ent)
-    log("Built " .. ent.name)
     if ent.name == "tw_depot" then
         -- XXX temporary bodge until I have a proper GUI
         local routenum = global.route_counter
@@ -99,10 +98,8 @@ script.on_event({defines.events.on_entity_cloned}, function (e) handle_built_eve
 script.on_event({defines.events.on_train_changed_state},
     function (e)
         local train = e.train
-        log("Train state: " .. fstr(e.old_state) .. " -> " .. fstr(train.state))
         -- XXX FIXME this should only respond to trains that have joined a depot
         if train.state == defines.train_state.wait_station and e.old_state == defines.train_state.arrive_station then
-            --log("Train in station: " .. train.station.backer_name)
             if train.station ~= nil and train.station.prototype.name == "tw_depot" then
                 reset_train(train.id, train)
             else

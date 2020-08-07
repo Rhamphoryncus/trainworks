@@ -408,10 +408,8 @@ script.on_event({defines.events.on_gui_click},
             local stopnum = tonumber(e.element.name:match("^trainworks_checkbox_(.*)$"))
             if e.element.state then
                 route_add_stop(routenum, stopnum)
-                log("Add "..fstr(stopnum))
             else
                 route_remove_stop(routenum, stopnum)
-                log("Remove "..fstr(stopnum))
             end
         elseif e.element.name == "trainworks_toggleuniversal" then
             local routenum = global.gui_selected_route[e.player_index]
@@ -427,7 +425,7 @@ script.on_event({defines.events.on_gui_click},
 
 script.on_event({defines.events.on_gui_text_changed},
     function (e)
-        log("Text changed by " .. fstr(e.player_index) .. ": " .. fstr(e.element.text))
+        game.print("Text changed by " .. fstr(e.player_index) .. ": " .. fstr(e.element.text))
     end
 )
 
@@ -438,7 +436,6 @@ function rename_route(routenum, text)
         game.print("Can't rename route " .. oldname .. " to " .. text .. ", already exists!")
         return
     end
-    log("Renaming route " .. fstr(routenum) .. " to " .. fstr(text))
     global.route_map[oldname] = nil
     global.routes[routenum].name = text
     global.route_map[text] = routenum

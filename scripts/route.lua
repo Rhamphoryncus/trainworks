@@ -165,9 +165,6 @@ function tasks.update_reqprov(task)
         remove_value_from_reqprov(routenum, stopnum, global.values[stopnum])
         add_value_to_reqprov(routenum, stopnum, global.newvalues[stopnum])
     end
-
-    --log("Requested: " .. fstr(routenum) .. " " .. fstr(global.routes[routenum].requested))
-    --log("Provided: " .. fstr(routenum) .. " " .. fstr(global.routes[routenum].provided))
 end
 
 
@@ -231,8 +228,6 @@ function tasks.copy_service_routes(task)
     global.values = global.newvalues
     global.newvalues = {}
 
-    --log("Values: " .. fstr(global.values))
-
     -- Make a copy of global.routes but in a dense array form
     for routenum, route in pairs(global.routes) do
         table.insert(global.route_jobs, {handler="service_route_requests", routenum=routenum})
@@ -265,7 +260,6 @@ function tasks.service_route_requests(task)
                 if beststopnum ~= nil then
                     local actions = {}
                     actions[itemname] = math.min(amount, bestamount)
-                    --log("Min2: " .. fstr(actions))
                     dispatch_train(routenum, beststopnum, stopnum, actions)
                 end
             end
