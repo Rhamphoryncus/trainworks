@@ -3,7 +3,7 @@
 
 function merge_stop_signals(stopnum)
     local output = {}
-    local stop = global.stopchests[stopnum].stop
+    local stop = global.stops[stopnum].stop
     if not stop.valid then
         return {}
     end
@@ -21,7 +21,7 @@ end
 
 function calculate_value_for_stop(stopnum)
     local value = {}
-    local chests = global.stopchests[stopnum].chests
+    local chests = global.stops[stopnum].chests
 
     -- Add signals to value
     local stopsignals = merge_stop_signals(stopnum)
@@ -47,7 +47,7 @@ function calculate_value_for_stop(stopnum)
     end
 
     -- Add pending trains to value
-    for trainid, x in pairs(global.stop_actions[stopnum]) do
+    for trainid, x in pairs(global.stops[stopnum].actions) do
         for itemname, amount in pairs(x.actions) do
             if value[itemname] == nil then
                 value[itemname] = {have=0, want=0, pickup=0, dropoff=0}
@@ -120,13 +120,13 @@ function tasks.cleanup(task)
     end
     global.cleanup_trains = {}
 
-    table.insert(global.route_jobs, {handler="copy_stopchests"})
+    table.insert(global.route_jobs, {handler="copy_stops"})
 end
 
 
-function tasks.copy_stopchests(task)
-    -- Make a copy of global.stopchests but in a dense array form
-    for stopnum, x in pairs(global.stopchests) do
+function tasks.copy_stops(task)
+    -- Make a copy of global.stops keys but in a dense array form
+    for stopnum, x in pairs(global.stops) do
         table.insert(global.route_jobs, {handler="calculate_values", stopnum=stopnum})
     end
 
@@ -136,7 +136,7 @@ end
 
 function tasks.calculate_values(task)
     -- Calculate values for each stop
-    global.newvalues[task.stopnum] = calculate_value_for_stop(task.stopnum)
+    global.stops[task.stopnum].newvalues = calculate_value_for_stop(task.stopnum)
 end
 
 
@@ -162,8 +162,8 @@ function tasks.update_reqprov(task)
     local routenum = task.routenum
 
     for stopnum, x in pairs(get_route_stops(routenum)) do
-        remove_value_from_reqprov(routenum, stopnum, global.values[stopnum])
-        add_value_to_reqprov(routenum, stopnum, global.newvalues[stopnum])
+        remove_value_from_reqprov(routenum, stopnum, global.stops[stopnum].oldvalues)
+        add_value_to_reqprov(routenum, stopnum, global.stops[stopnum].newvalues)
     end
 end
 
@@ -186,7 +186,7 @@ end
 function get_route_stops(routenum)
     -- XXX The return signature here varies.  The key is the same either way, stopnum, but the value can either be 'true' or be a table
     if global.universal_routes[routenum] then
-        return global.stopchests
+        return global.stops
     else
         return global.routes[routenum].stops
     end
@@ -198,8 +198,8 @@ function calc_provider_weight(reqstopnum, provstopnum, itemname, wanted, have)
     -- threshold wanted/have, scale it, and make it negative
     -- scale idle time and make it positive
     local weight = 0
-    local reqstop = global.stopchests[reqstopnum].stop
-    local provstop = global.stopchests[provstopnum].stop
+    local reqstop = global.stops[reqstopnum].stop
+    local provstop = global.stops[provstopnum].stop
     if not reqstop.valid or not provstop.valid then
         -- Stop has been removed
         return -math.huge
@@ -217,7 +217,7 @@ function calc_provider_weight(reqstopnum, provstopnum, itemname, wanted, have)
     end
 
     -- Time since last serviced
-    weight = weight + (game.tick - global.stopchests[provstopnum].last_activity) / 1000
+    weight = weight + (game.tick - global.stops[provstopnum].last_activity) / 1000
 
     return weight
 end
@@ -225,8 +225,10 @@ end
 
 function tasks.copy_service_routes(task)
     -- Updating values and reqprov has finished
-    global.values = global.newvalues
-    global.newvalues = {}
+    for stopnum, stop in pairs(global.stops) do
+        stop.oldvalues = stop.newvalues
+        stop.newvalues = {}
+    end
 
     -- Make a copy of global.routes but in a dense array form
     for routenum, route in pairs(global.routes) do

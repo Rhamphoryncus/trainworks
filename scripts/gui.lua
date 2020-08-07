@@ -65,7 +65,7 @@ script.on_event({defines.events.on_player_left_game},
 
 
 function get_backer_name(stopnum)
-    local stop = global.stopchests[stopnum].stop
+    local stop = global.stops[stopnum].stop
     if stop.valid then
         return stop.backer_name
     else
@@ -294,7 +294,7 @@ function populate_modify(playernum, routenum)
 
     -- List of stations that could be added to this route
     local toppane = flow.add{type="scroll-pane", name="trainworks_modifypane", vertical_scroll_policy="auto-and-reserve-space"}
-    for stopnum, x in pairs(global.stopchests) do
+    for stopnum, x in pairs(global.stops) do
         local state = not not global.routes[routenum].stops[stopnum]
         local enabled = not global.universal_routes[routenum]
         toppane.add{type="checkbox", name=("trainworks_checkbox_"..tostring(stopnum)), state=state, caption=get_backer_name(stopnum), enabled=enabled}

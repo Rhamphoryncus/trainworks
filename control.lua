@@ -9,6 +9,7 @@
 -- Consider unifying the many stop members into a stopstate table
 -- Handle migration/reset parts of the mod on version changes
 -- Rename tw_ prototype prefix to trainworks_
+-- Make stopchest's last_activity be per-typename
 
 
 require("scripts.util")
@@ -18,19 +19,29 @@ require("scripts.gui")
 
 
 script.on_init(function()
-    global.stopchests = {}  -- stopnum -> {stop, chests, last_activity}  -- The chests belonging to each stop
-    global.trains = {}  -- trainid -> {train, src, dest, actions, last_fuel, last_activity}  -- Trains in progress
+    global.stops = {}  -- stopnum -> {stop, chests, last_activity, actions, oldvalues, newvalues}
+        -- stop is stop  -- Underlying stop handle
+        -- chests is {chest, ...}  -- Chest handles
+        -- last_activity is tick  -- Game tick that something was last picked up/dropped off
+        -- actions is trainid -> {actions, pickup}
+            -- actions is itemname -> amount  -- Transfers intended at this stop
+            -- pickup is boolean  -- If the transfers are a pickup or drop off
+        -- oldvalues is itemname -> {have, want, coming}  -- Previous pass's values
+            -- have is integer
+            -- want is integer
+            -- coming is integer
+        -- newvalues is itemname -> {have, want, coming}  -- Current pass's values
+            -- have is integer
+            -- want is integer
+            -- coming is integer
+    global.trains = {}  -- trainid -> {train, src, dest, actions, last_fuel, last_activity}
         -- train is train  -- Underlying train handle
         -- src is stop  -- Pickup station
         -- dest is stop  -- Dropoff station
         -- actions is itemname -> amount
         -- last_fuel is itemname -> amount  -- Amount of fuel on locomotives last time we looked
         -- last_activity is tick  -- Game tick when we last loaded fuel
-    global.stop_actions = {}  -- stopnum -> trainid -> {actions, pickup}  -- Actions pending for each stop
-        -- actions is itemname -> amount
-    global.stop_idletrain = {}  -- stopnum -> train  -- Train idling at each stop
-    global.values = {}  -- stopnum -> itemname -> {have, want, coming}  -- Previous pass's values
-    global.newvalues = {}  -- stopnum -> itemname -> {have, want, coming}  -- Current pass's values
+    global.depot_idletrain = {}  -- stopnum -> train  -- Train idling at each stop
     global.routes = {}  -- routenum -> {name, trains, stops, provided, requested}
         -- name is string
         -- trains is trainid -> train

@@ -112,10 +112,10 @@ function dispatch_train(routenum, sourcenum, destnum, actions)
         return
     end
 
-    global.stop_idletrain[train.station.unit_number] = nil
+    global.depot_idletrain[train.station.unit_number] = nil
 
-    local source = global.stopchests[sourcenum].stop
-    local dest = global.stopchests[destnum].stop
+    local source = global.stops[sourcenum].stop
+    local dest = global.stops[destnum].stop
     if not source.valid or not dest.valid or not source.connected_rail or not dest.connected_rail then
         return
     end
@@ -133,8 +133,8 @@ function dispatch_train(routenum, sourcenum, destnum, actions)
     global.trains[train.id].src = source
     global.trains[train.id].dest = dest
     global.trains[train.id].actions = actions
-    global.stop_actions[source.unit_number][train.id] = {actions=actions, pickup=true}
-    global.stop_actions[dest.unit_number][train.id] = {actions=actions, pickup=false}
+    global.stops[source.unit_number].actions[train.id] = {actions=actions, pickup=true}
+    global.stops[dest.unit_number].actions[train.id] = {actions=actions, pickup=false}
 end
 
 function reset_train(trainid, train)
@@ -142,10 +142,10 @@ function reset_train(trainid, train)
         global.trains[trainid] = {train=train}
     else
         if global.trains[trainid].src ~= nil then
-            global.stop_actions[global.trains[trainid].src.unit_number][trainid] = nil  -- Delete the pickup action
+            global.stops[global.trains[trainid].src.unit_number].actions[trainid] = nil  -- Delete the pickup action
         end
         if global.trains[trainid].dest ~= nil then
-            global.stop_actions[global.trains[trainid].dest.unit_number][trainid] = nil  -- Delete the dropoff action
+            global.stops[global.trains[trainid].dest.unit_number].actions[trainid] = nil  -- Delete the dropoff action
         end
         global.trains[trainid].src = nil
         global.trains[trainid].dest = nil
@@ -160,7 +160,7 @@ function reset_train(trainid, train)
         return
     end
 
-    global.stop_idletrain[train.station.unit_number] = train
+    global.depot_idletrain[train.station.unit_number] = train
 
     local routenum = global.route_map[train.station.backer_name]
     if routenum == nil then
@@ -257,7 +257,7 @@ end
 
 function get_chest_inventories(stopnum)
     local invs = {}
-    local chests = global.stopchests[stopnum].chests
+    local chests = global.stops[stopnum].chests
     for i, chest in pairs(chests) do
         if chest.valid then
             table.insert(invs, chest.get_inventory(defines.inventory.chest))
@@ -304,15 +304,15 @@ function action_train(train)
     if train.schedule.current == 1 then
         -- Load
         transfer_inventories(get_chest_inventories(action.src.unit_number), get_train_inventories(train), action.actions)
-        global.stopchests[action.src.unit_number].last_activity = game.tick
+        global.stops[action.src.unit_number].last_activity = game.tick
 
-        global.stop_actions[action.src.unit_number][train.id] = nil  -- Delete the pickup action
+        global.stops[action.src.unit_number].actions[train.id] = nil  -- Delete the pickup action
     elseif train.schedule.current == 2 then
         -- Unload
         transfer_inventories(get_train_inventories(train), get_chest_inventories(action.dest.unit_number), action.actions)
-        global.stopchests[action.dest.unit_number].last_activity = game.tick
+        global.stops[action.dest.unit_number].last_activity = game.tick
 
-        global.stop_actions[action.dest.unit_number][train.id] = nil  -- Delete the dropoff action
+        global.stops[action.dest.unit_number].actions[train.id] = nil  -- Delete the dropoff action
     end
 end
 
@@ -413,8 +413,7 @@ function find_stop_chests(stop)
     --end
 
     -- XXX FIXME last_activity should be per-typename and provided vs requested
-    global.stopchests[stop.unit_number] = {stop=stop, chests=chestlist, last_activity=game.tick}
-    global.stop_actions[stop.unit_number] = {}
+    global.stops[stop.unit_number] = {stop=stop, chests=chestlist, last_activity=game.tick, actions={}}
 end
 
 
@@ -496,7 +495,7 @@ end
 script.on_event({defines.events.on_entity_renamed},
     function (e)
         if e.entity.prototype.name == "tw_depot" then
-            local train = global.stop_idletrain[e.entity.unit_number]
+            local train = global.depot_idletrain[e.entity.unit_number]
 
             if train ~= nil and train.state == defines.train_state.wait_station and train.station == e.entity then
                 local routenum = global.route_map[e.entity.backer_name]
@@ -504,7 +503,7 @@ script.on_event({defines.events.on_entity_renamed},
                     global.routes[routenum].trains[train.id] = train
                 end
             else
-                global.stop_idletrain[e.entity.unit_number] = nil
+                global.depot_idletrain[e.entity.unit_number] = nil
             end
         end
     end
