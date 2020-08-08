@@ -120,6 +120,27 @@ function tasks.cleanup(task)
     end
     global.cleanup_trains = {}
 
+    for routenum, x in pairs(global.cleanup_routes) do
+        for playernum, player in pairs(game.players) do
+            -- Unselect the route
+            if routenum == global.gui_selected_route[playernum] then
+                select_route(playernum, nil)
+            end
+
+            -- Remove the radiobutton
+            local listpane = global.gui_routelist[playernum]
+            if listpane ~= nil then
+                listpane[("trainworks_route_"..routenum)].destroy()
+            end
+        end
+    
+        -- XXX FIXME do something to orphan all trains servicing this route
+
+        global.route_map[global.routes[routenum].name] = nil
+        global.routes[routenum] = nil
+    end
+    global.cleanup_routes = {}
+
     table.insert(global.route_jobs, {handler="copy_stops"})
 end
 

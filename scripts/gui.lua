@@ -87,7 +87,11 @@ function populate_status(playernum)
     tabs.add_tab(routetab, routepane)
     local first = nil
     for routenum, route in pairs(global.routes) do
-        routepane.add{type="radiobutton", name=("trainworks_route_"..routenum), state=(not first), caption=route.name}
+        local caption = route.name
+        if routenum == 1 then
+            caption = {"gui.universalroute", caption}
+        end
+        routepane.add{type="radiobutton", name=("trainworks_route_"..routenum), state=(not first), caption=caption}
         if first == nil then
             first = routenum
         end
@@ -97,6 +101,7 @@ function populate_status(playernum)
     -- Stops within the selected route
     -- XXX FIXME this should swap out for train status
     local stationflow = frame.add{type="flow", name="trainworks_stationflow", direction="vertical"}
+    stationflow.add{type="button", name="trainworks_newroute", caption={"gui.newroute"}}
     stationflow.add{type="button", name="trainworks_showmodify", caption={"gui.showmodify"}}
     local statuspane = stationflow.add{type="scroll-pane", name="trainworks_stationpane", vertical_scroll_policy="auto-and-reserve-space"}
     global.gui_routestatus[playernum] = statuspane
@@ -290,6 +295,10 @@ function populate_modify(playernum, routenum)
     flow.add{type="textfield", name="trainworks_modifyname", text=global.routes[routenum].name}
     local state = not not global.universal_routes[routenum]
     flow.add{type="checkbox", name="trainworks_toggleuniversal", state=state, caption={"gui.toggleuniversal"}}
+    local button = flow.add{type="button", name="trainworks_deleteroute", caption={"gui.deleteroute"}, tooltip={"gui.deleteroute_tooltip"}}
+    if #global.routes[routenum] > 0 or routenum == 1 then
+        button.enabled = false
+    end
     flow.add{type="textfield", name="trainworks_modifyfilter", tooltip={"gui.modifyfilter"}}
 
     -- List of stations that could be added to this route
@@ -302,6 +311,7 @@ function populate_modify(playernum, routenum)
 
     frame.visible = true
     global.gui_routemodify[playernum] = flow
+    global.gui_deleteroute[playernum] = button
 end
 
 function clear_modify(playernum)
@@ -309,6 +319,7 @@ function clear_modify(playernum)
     frame.visible = false
     frame.clear()
     global.gui_routemodify[playernum] = nil
+    global.gui_deleteroute[playernum] = nil
 end
 
 
@@ -316,6 +327,13 @@ function route_add_stop(routenum, stopnum)
     global.routes[routenum].stops[stopnum] = true
 
     for playernum, player in pairs(game.players) do
+        -- Prevent deletion of a non-empty route
+        --local button = mod_gui.get_frame_flow(game.players[playernum]).trainworks_modify.trainworks_modifyflow.trainworks_deleteroute
+        local button = global.gui_deleteroute[playernum]
+        if button ~= nil then
+            button.enabled = false
+        end
+
         -- Add to status window
         local statuspane = global.gui_routestatus[playernum]
         if statuspane ~= nil then
@@ -332,6 +350,13 @@ function route_remove_stop(routenum, stopnum)
     global.routes[routenum].dirty = true
 
     for playernum, player in pairs(game.players) do
+        -- Allow deletion of the route if it's empty
+        local button = global.gui_deleteroute[playernum]
+        if button ~= nil and #global.routes[routenum].stops == 0 then
+            button.enabled = true
+        end
+
+
         -- Remove from status window
         local statuspane = global.gui_routestatus[playernum]
         if statuspane ~= nil then
@@ -339,6 +364,33 @@ function route_remove_stop(routenum, stopnum)
             if statuspane[name] ~= nil then
                 statuspane[name].destroy()
             end
+        end
+    end
+end
+
+
+function new_route()
+    -- Create a new stop, extract the backer name, and delete the stop
+    -- Add stop to global.routes
+    -- Add to global.route_map
+    -- Add to each of global.gui_routelist
+    local tempstop = game.surfaces[1].create_entity{name="trainworks_stop", position={0,0}}
+    local routename = tempstop.backer_name
+    tempstop.destroy()
+    if global.route_map[routename] ~= nil then
+        game.print("New route matches existing route name " .. routename)
+        return
+    end
+
+    local routenum = global.route_counter
+    global.route_counter = global.route_counter + 1
+    global.routes[routenum] = {name=routename, trains={}, stops={}, provided={}, requested={}}
+    global.route_map[routename] = routenum
+
+    for playernum, player in pairs(game.players) do
+        local listpane = global.gui_routelist[playernum]
+        if listpane ~= nil then
+            listpane.add{type="radiobutton", name=("trainworks_route_"..routenum), state=false, caption=routename}
         end
     end
 end
@@ -436,6 +488,17 @@ script.on_event({defines.events.on_gui_click},
                 deactivate_universal(routenum)
             else
                 activate_universal(routenum)
+            end
+        elseif e.element.name == "trainworks_newroute" then
+            game.print("new route")
+            new_route()
+        elseif e.element.name == "trainworks_deleteroute" then
+            local routenum = global.gui_selected_route[e.player_index]
+            if routenum == 1 then
+                game.print("Can't delete universal route (should be impossible)")
+            else
+                game.print("delete route")
+                global.cleanup_routes[routenum] = true
             end
         end
     end

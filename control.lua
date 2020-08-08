@@ -1,5 +1,5 @@
 -- Todo:
--- Handle destruction of entities.  Probably just .valid checks and add them to a global "delete me" table to be processed later?
+-- Handle destruction of entities.  Probably just .valid checks and add them to a global "delete me" table to be processed later?  Trains are done but stops and depots are still needed.
 -- Add profiling hooks
 -- Add a hardcoded route 1 as universal to share reqprov with all universal routes
 -- Add GUI buttons for creating new routes and deleting empty routes
@@ -7,8 +7,10 @@
 -- Add provider/requester priorities to routes
 -- Add provider/requester priorities to stops
 -- Handle migration/reset parts of the mod on version changes
--- Rename tw_ prototype prefix to trainworks_
 -- Make stopchest's last_activity be per-typename
+-- Remove unused parts of train status
+-- Consider changing colour or otherwise hilighting trains with error status.  Maybe bold?
+-- Make sure deleting a route orphans any trains it owns
 
 
 require("scripts.util")
@@ -33,6 +35,7 @@ script.on_init(function()
             -- have is integer
             -- want is integer
             -- coming is integer
+
     global.trains = {}  -- trainid -> {train, src, dest, actions, last_fuel, last_activity}
         -- train is train  -- Underlying train handle
         -- src is stop  -- Pickup station
@@ -41,6 +44,7 @@ script.on_init(function()
         -- last_fuel is itemname -> amount  -- Amount of fuel on locomotives last time we looked
         -- last_activity is tick  -- Game tick when we last loaded fuel
     global.depot_idletrain = {}  -- stopnum -> train  -- Train idling at each stop
+
     global.routes = {}  -- routenum -> {name, trains, stops, provided, requested}
         -- name is string
         -- trains is trainid -> train
@@ -49,8 +53,11 @@ script.on_init(function()
         -- requested is itemname -> stopnum -> amount
         -- dirty is true/nil  -- Indicates a route that had stops removed and the reqprov needs resetting
     global.universal_routes = {}  -- routenum -> true
-    global.route_counter = 1  -- Index for new routes.  Perpetually increasing
+    global.route_counter = 2  -- Index for new routes.  Perpetually increasing
     global.route_map = {}  -- routename -> routenum  -- reverse mapping of depot/route name to routenum
+    global.routes[1] = {name="Universal", trains={}, stops={}, provided={}, requested={}}
+    global.route_map["Universal"] = 1
+    global.universal_routes[1] = true
 
     global.gui_selected_route = {}  -- playernum -> routenum
     global.gui_players = {}  -- playernum -> true
@@ -59,11 +66,13 @@ script.on_init(function()
     global.gui_routemodify = {}  -- playernum -> guielement
     global.gui_selected_train = {}  -- playernum -> trainid
     global.gui_traintable = {}  -- playernum -> guielement
+    global.gui_deleteroute = {}  -- playernum -> guielement
 
     global.route_index = 1  -- Index number into global.route_jobs
     global.route_jobs = {}  -- {{handler, ...}, ...}  -- Array of tasks to be performed, one tick at a time
 
-    global.cleanup_trains = {}  -- trainid -> true  -- Trains that were destroyed and need to be untracked
+    global.cleanup_trains = {}  -- trainid -> train  -- Trains that were destroyed and need to be untracked
+    global.cleanup_routes = {}  -- routenum -> true  -- Routes that the user asked to delete
 
     gui_initialize_players()
 end)
@@ -80,12 +89,6 @@ script.on_event({defines.events.on_tick},
 
 function handle_built_event(ent)
     if ent.name == "trainworks_depot" then
-        -- XXX temporary bodge until I have a proper GUI
-        local routenum = global.route_counter
-        global.route_counter = global.route_counter + 1
-        global.routes[routenum] = {name=ent.backer_name, trains={}, stops={}, provided={}, requested={}}
-        global.route_map[ent.backer_name] = routenum
-        global.universal_routes[routenum] = true
     elseif ent.name == "trainworks_stop" then
         local control = ent.get_or_create_control_behavior()
         control.send_to_train = false
