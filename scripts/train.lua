@@ -433,7 +433,9 @@ function search_for_stop_same(surface, pos, direction)
 
     local stops = surface.find_entities_filtered{type="train-stop", position={x, y}}
     local stop = stops[1]  -- XXX ugly hack
-    --game.print("Found: " .. fstr(stop))
+    if stop == nil or stop.prototype.name ~= "trainworks_stop" then
+        return nil
+    end
 
     return stop
 end
@@ -459,7 +461,9 @@ function search_for_stop_opposite(surface, pos, direction)
 
     local stops = surface.find_entities_filtered{type="train-stop", position={x, y}}
     local stop = stops[1]  -- XXX ugly hack
-    --game.print("Found: " .. fstr(stop))
+    if stop == nil or stop.prototype.name ~= "trainworks_stop" then
+        return nil
+    end
 
     return stop
 end
@@ -505,6 +509,8 @@ script.on_event({defines.events.on_entity_renamed},
             else
                 global.depot_idletrain[e.entity.unit_number] = nil
             end
+        elseif e.entity.prototype.name == "trainworks_stop" then
+            game.print("Stop renamed")
         end
     end
 )

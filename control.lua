@@ -11,6 +11,10 @@
 -- Remove unused parts of train status
 -- Consider changing colour or otherwise hilighting trains with error status.  Maybe bold?
 -- Make sure deleting a route orphans any trains it owns
+-- Automatically add new stops to the universal route
+-- Bug: placing a chest will scan for any type of train-stop, not just a trainworks_stop
+-- Allow quick replacing between train-stop types
+-- Bug: renaming a depot adds a train to the new route but doesn't remove from the old route
 
 
 require("scripts.util")
