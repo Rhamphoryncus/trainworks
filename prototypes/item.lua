@@ -1,9 +1,11 @@
 local depot = table.deepcopy(data.raw["train-stop"]["train-stop"])
 depot.name = "trainworks_depot"
+depot.color = {a=0.5, r=0, g=0, b=0.95}
 
 local depot_item = table.deepcopy(data.raw.item["train-stop"])
 depot_item.name = "trainworks_depot"
 depot_item.place_result = "trainworks_depot"
+depot_item.icon = "__Trainworks__/graphics/depot.png"
 
 local depot_recipe = table.deepcopy(data.raw.recipe["train-stop"])
 depot_recipe.enabled = true
@@ -15,10 +17,12 @@ data:extend{depot, depot_item, depot_recipe}
 
 local stop = table.deepcopy(data.raw["train-stop"]["train-stop"])
 stop.name = "trainworks_stop"
+stop.color = {a=0.5, r=0.75, g=0.5, b=0}
 
 local stop_item = table.deepcopy(data.raw.item["train-stop"])
 stop_item.name = "trainworks_stop"
 stop_item.place_result = "trainworks_stop"
+stop_item.icon = "__Trainworks__/graphics/stop.png"
 
 local stop_recipe = table.deepcopy(data.raw.recipe["train-stop"])
 stop_recipe.enabled = true

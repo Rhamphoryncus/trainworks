@@ -96,8 +96,6 @@ script.on_event({defines.events.on_tick},
 function handle_built_event(ent)
     if ent.name == "trainworks_depot" then
     elseif ent.name == "trainworks_stop" then
-        local control = ent.get_or_create_control_behavior()
-        control.send_to_train = false
         register_stop(ent)
     elseif ent.name == "locomotive" then
     elseif ent.name == "trainworks_chest_horizontal" then

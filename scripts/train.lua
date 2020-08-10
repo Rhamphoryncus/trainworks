@@ -412,6 +412,12 @@ end
 
 
 function register_stop(stop)
+    -- Clear the send_to_train flag if it wasn't user provided
+    if stop.get_control_behavior() == nil then
+        local control = stop.get_or_create_control_behavior()
+        control.send_to_train = false
+    end
+
     -- XXX FIXME last_activity should be per-typename and provided vs requested
     global.stops[stop.unit_number] = {stop=stop, chests={}, last_activity=game.tick, actions={}}
     update_stop_chests(stop)
