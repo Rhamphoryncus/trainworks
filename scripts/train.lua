@@ -367,7 +367,7 @@ flip_direction[defines.direction.west] = defines.direction.east
 flip_direction[defines.direction.northwest] = defines.direction.southeast
 
 
-function find_stop_chests(stop)
+function update_stop_chests(stop)
     -- Chests on the same side as the stop
     local x, y = stop.position.x, stop.position.y
     if stop.direction == defines.direction.north then
@@ -382,7 +382,6 @@ function find_stop_chests(stop)
     end
 
     local chestlist = find_chests(stop.surface, x, y, flip_direction[stop.direction])
-    --game.print("find_stop_chests same: " .. fstr(stop) .. " -> " .. fstr(chestlist) .. " [" .. fstr(x) .. "," .. fstr(y) .. "]")
 
     -- Chests on the opposite side from the stop
     local x, y = stop.position.x, stop.position.y
@@ -402,18 +401,20 @@ function find_stop_chests(stop)
     end
 
     local chestlist2 = find_chests(stop.surface, x, y, flip_direction[stop.direction])
-    --game.print("find_stop_chests opposite: " .. fstr(stop) .. " -> " .. fstr(chestlist2) .. " [" .. fstr(x) .. "," .. fstr(y) .. "]")
 
     -- Merge the two lists
     for x, chest in pairs(chestlist2) do
         table.insert(chestlist, chest)
     end
-    --if #chestlist > 0 then
-    --    game.print("Chestlist " .. fstr(stop) .. " -> " .. fstr(chestlist))
-    --end
 
+    global.stops[stop.unit_number].chests = chestlist
+end
+
+
+function register_stop(stop)
     -- XXX FIXME last_activity should be per-typename and provided vs requested
-    global.stops[stop.unit_number] = {stop=stop, chests=chestlist, last_activity=game.tick, actions={}}
+    global.stops[stop.unit_number] = {stop=stop, chests={}, last_activity=game.tick, actions={}}
+    update_stop_chests(stop)
 end
 
 
@@ -491,7 +492,7 @@ function register_chest(chest)
 
     -- XXX I allow multiple stops to use the same chest.  Trains might get a bit confused but it's not catastrophic
     for i, stop in pairs(stops) do
-        find_stop_chests(stop)
+        update_stop_chests(stop)
     end
 end
 

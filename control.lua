@@ -11,10 +11,11 @@
 -- Remove unused parts of train status
 -- Consider changing colour or otherwise hilighting trains with error status.  Maybe bold?
 -- Make sure deleting a route orphans any trains it owns
--- Automatically add new stops to the universal route
--- Bug: placing a chest will scan for any type of train-stop, not just a trainworks_stop
+-- Make newly placed stops immediately get added to the GUI, both the stationpane and modifypane
+-- Make the universal route explicitly contain all stops, not just implicitly
 -- Allow quick replacing between train-stop types
 -- Bug: renaming a depot adds a train to the new route but doesn't remove from the old route
+-- Better balancing for wildly unbalanced chests
 
 
 require("scripts.util")
@@ -96,7 +97,7 @@ function handle_built_event(ent)
     elseif ent.name == "trainworks_stop" then
         local control = ent.get_or_create_control_behavior()
         control.send_to_train = false
-        find_stop_chests(ent)
+        register_stop(ent)
     elseif ent.name == "locomotive" then
     elseif ent.name == "trainworks_chest_horizontal" then
         register_chest(ent)
