@@ -76,6 +76,7 @@ script.on_init(function()
     global.route_index = 1  -- Index number into global.route_jobs
     global.route_jobs = {}  -- {{handler, ...}, ...}  -- Array of tasks to be performed, one tick at a time
 
+    global.cleanup_stops = {}  -- stopid -> true  -- Stops that were destroyed and need to be untracked
     global.cleanup_trains = {}  -- trainid -> train  -- Trains that were destroyed and need to be untracked
     global.cleanup_routes = {}  -- routenum -> true  -- Routes that the user asked to delete
 

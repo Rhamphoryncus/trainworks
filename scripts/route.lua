@@ -5,6 +5,7 @@ function merge_stop_signals(stopnum)
     local output = {}
     local stop = global.stops[stopnum].stop
     if not stop.valid then
+        global.cleanup_stops[stopnum] = true
         return {}
     end
     local signals = stop.get_merged_signals() or {}
@@ -115,6 +116,11 @@ end
 
 tasks = {}
 function tasks.cleanup(task)
+    for stopnum, x in pairs(global.cleanup_stops) do
+        global.stops[stopnum] = nil
+    end
+    global.cleanup_stops = {}
+
     for trainid, train in pairs(global.cleanup_trains) do
         reset_train(trainid, train)
     end
