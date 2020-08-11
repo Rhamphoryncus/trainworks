@@ -204,7 +204,7 @@ function tasks.update_reqprov(task)
     -- Update reqprov from newvalues
     local routenum = task.routenum
 
-    for stopnum, x in pairs(get_route_stops(routenum)) do
+    for stopnum, x in pairs(global.routes[routenum].stops) do
         remove_value_from_reqprov(routenum, stopnum, global.stops[stopnum].oldvalues)
         add_value_to_reqprov(routenum, stopnum, global.stops[stopnum].newvalues)
     end
@@ -222,16 +222,6 @@ function process_routes()
     else
         --mod_gui.get_button_flow(game.players[1]).trainworks_top_button.caption = task.handler
         tasks[task.handler](task)
-    end
-end
-
-
-function get_route_stops(routenum)
-    -- XXX The return signature here varies.  The key is the same either way, stopnum, but the value can either be 'true' or be a table
-    if global.universal_routes[routenum] then
-        return global.stops
-    else
-        return global.routes[routenum].stops
     end
 end
 

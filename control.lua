@@ -9,8 +9,6 @@
 -- Remove unused parts of train status
 -- Consider changing colour or otherwise hilighting trains with error status.  Maybe bold?
 -- Make sure deleting a route orphans any trains it owns
--- Make newly placed stops immediately get added to the GUI, both the stationpane and modifypane
--- Make the universal route explicitly contain all stops, not just implicitly
 -- Bug: renaming a depot adds a train to the new route but doesn't remove from the old route
 -- Better balancing for wildly unbalanced chests
 -- Generate backer_name for new routes in a way that doesn't create a temporary object (and smoke) at 0,0
@@ -55,12 +53,10 @@ script.on_init(function()
         -- provided is itemname -> stopnum -> amount
         -- requested is itemname -> stopnum -> amount
         -- dirty is true/nil  -- Indicates a route that had stops removed and the reqprov needs resetting
-    global.universal_routes = {}  -- routenum -> true
     global.route_counter = 2  -- Index for new routes.  Perpetually increasing
     global.route_map = {}  -- routename -> routenum  -- reverse mapping of depot/route name to routenum
     global.routes[1] = {name="Universal", trains={}, stops={}, provided={}, requested={}}
     global.route_map["Universal"] = 1
-    global.universal_routes[1] = true
 
     global.gui_selected_route = {}  -- playernum -> routenum
     global.gui_players = {}  -- playernum -> true

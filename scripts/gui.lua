@@ -171,7 +171,7 @@ function populate_stops_in_route(playernum, routenum)
     pane.clear()
 
     if routenum ~= nil then
-        for stopnum, x in pairs(get_route_stops(routenum)) do
+        for stopnum, x in pairs(global.routes[routenum].stops) do
             local name = "trainworks_routelabel_"..tostring(stopnum)
             pane.add{type="label", name=name, caption=get_backer_name(stopnum)}
         end
@@ -293,8 +293,6 @@ function populate_modify(playernum, routenum)
     local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_modify
     local flow = frame.add{type="flow", name="trainworks_modifyflow", direction="vertical"}
     flow.add{type="textfield", name="trainworks_modifyname", text=global.routes[routenum].name}
-    local state = not not global.universal_routes[routenum]
-    flow.add{type="checkbox", name="trainworks_toggleuniversal", state=state, caption={"gui.toggleuniversal"}}
     local button = flow.add{type="button", name="trainworks_deleteroute", caption={"gui.deleteroute"}, tooltip={"gui.deleteroute_tooltip"}}
     if #global.routes[routenum] > 0 or routenum == 1 then
         button.enabled = false
@@ -317,7 +315,7 @@ function populate_stops_in_modify(playernum, routenum)
 
         for stopnum, x in pairs(global.stops) do
             local state = not not global.routes[routenum].stops[stopnum]
-            local enabled = not global.universal_routes[routenum]
+            local enabled = (routenum ~= 1)
             toppane.add{type="checkbox", name=("trainworks_routecheckbox_"..tostring(stopnum)), state=state, caption=get_backer_name(stopnum), enabled=enabled}
         end
     end
@@ -406,44 +404,6 @@ function new_route()
 end
 
 
-function activate_universal(routenum)
-    global.universal_routes[routenum] = true
-    global.routes[routenum].dirty = true
-
-    for playernum, player in pairs(game.players) do
-        -- Update the route status window
-        populate_stops_in_route(playernum, routenum)
-
-        -- Update the route modify window
-        local modifypane = global.gui_routemodify[playernum]
-        if modifypane ~= nil then
-            for childname, child in pairs(modifypane.trainworks_modifypane.children) do
-                child.enabled = false
-            end
-        end
-    end
-end
-
-
-function deactivate_universal(routenum)
-    global.universal_routes[routenum] = nil
-    global.routes[routenum].dirty = true
-
-    for playernum, player in pairs(game.players) do
-        -- Update the route status window
-        populate_stops_in_route(playernum, routenum)
-
-        -- Update the route modify window
-        local modifypane = global.gui_routemodify[playernum]
-        if modifypane ~= nil then
-            for childname, child in pairs(modifypane.trainworks_modifypane.children) do
-                child.enabled = true
-            end
-        end
-    end
-end
-
-
 function update_gui()
     for playernum, player in pairs(game.players) do
         if mod_gui.get_frame_flow(player).trainworks_status.visible then
@@ -491,13 +451,6 @@ script.on_event({defines.events.on_gui_click},
                 route_add_stop(routenum, stopnum)
             else
                 route_remove_stop(routenum, stopnum)
-            end
-        elseif e.element.name == "trainworks_toggleuniversal" then
-            local routenum = global.gui_selected_route[e.player_index]
-            if global.universal_routes[routenum] then
-                deactivate_universal(routenum)
-            else
-                activate_universal(routenum)
             end
         elseif e.element.name == "trainworks_newroute" then
             game.print("new route")
