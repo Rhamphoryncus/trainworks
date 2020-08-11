@@ -172,7 +172,7 @@ function populate_stops_in_route(playernum, routenum)
 
     if routenum ~= nil then
         for stopnum, x in pairs(get_route_stops(routenum)) do
-            local name = "label_"..tostring(stopnum)
+            local name = "trainworks_routelabel_"..tostring(stopnum)
             pane.add{type="label", name=name, caption=get_backer_name(stopnum)}
         end
     end
@@ -300,18 +300,27 @@ function populate_modify(playernum, routenum)
         button.enabled = false
     end
     flow.add{type="textfield", name="trainworks_modifyfilter", tooltip={"gui.modifyfilter"}}
+    global.gui_routemodify[playernum] = flow
+    global.gui_deleteroute[playernum] = button
 
     -- List of stations that could be added to this route
     local toppane = flow.add{type="scroll-pane", name="trainworks_modifypane", vertical_scroll_policy="auto-and-reserve-space"}
-    for stopnum, x in pairs(global.stops) do
-        local state = not not global.routes[routenum].stops[stopnum]
-        local enabled = not global.universal_routes[routenum]
-        toppane.add{type="checkbox", name=("trainworks_checkbox_"..tostring(stopnum)), state=state, caption=get_backer_name(stopnum), enabled=enabled}
-    end
+    populate_stops_in_modify(playernum, routenum)
 
     frame.visible = true
-    global.gui_routemodify[playernum] = flow
-    global.gui_deleteroute[playernum] = button
+end
+
+function populate_stops_in_modify(playernum, routenum)
+    if global.gui_routemodify[playernum] ~= nil then
+        local toppane = global.gui_routemodify[playernum].trainworks_modifypane
+        toppane.clear()
+
+        for stopnum, x in pairs(global.stops) do
+            local state = not not global.routes[routenum].stops[stopnum]
+            local enabled = not global.universal_routes[routenum]
+            toppane.add{type="checkbox", name=("trainworks_routecheckbox_"..tostring(stopnum)), state=state, caption=get_backer_name(stopnum), enabled=enabled}
+        end
+    end
 end
 
 function clear_modify(playernum)
@@ -327,19 +336,20 @@ function route_add_stop(routenum, stopnum)
     global.routes[routenum].stops[stopnum] = true
 
     for playernum, player in pairs(game.players) do
-        -- Prevent deletion of a non-empty route
-        --local button = mod_gui.get_frame_flow(game.players[playernum]).trainworks_modify.trainworks_modifyflow.trainworks_deleteroute
-        local button = global.gui_deleteroute[playernum]
-        if button ~= nil then
-            button.enabled = false
-        end
+        if global.gui_selected_route[playernum] == routenum then
+            -- Prevent deletion of a non-empty route
+            local button = global.gui_deleteroute[playernum]
+            if button ~= nil then
+                button.enabled = false
+            end
 
-        -- Add to status window
-        local statuspane = global.gui_routestatus[playernum]
-        if statuspane ~= nil then
-            local name = "label_"..tostring(stopnum)
-            if statuspane[name] == nil then
-                statuspane.add{type="label", name=name, caption=get_backer_name(stopnum)}
+            -- Add to status window
+            local statuspane = global.gui_routestatus[playernum]
+            if statuspane ~= nil then
+                local name = "trainworks_routelabel_"..tostring(stopnum)
+                if statuspane[name] == nil then
+                    statuspane.add{type="label", name=name, caption=get_backer_name(stopnum)}
+                end
             end
         end
     end
@@ -360,7 +370,7 @@ function route_remove_stop(routenum, stopnum)
         -- Remove from status window
         local statuspane = global.gui_routestatus[playernum]
         if statuspane ~= nil then
-            local name = "label_"..tostring(stopnum)
+            local name = "trainworks_routelabel_"..tostring(stopnum)
             if statuspane[name] ~= nil then
                 statuspane[name].destroy()
             end
@@ -474,9 +484,9 @@ script.on_event({defines.events.on_gui_click},
                     populate_modify(e.player_index, routenum)
                 end
             end
-        elseif e.element.name:match("^trainworks_checkbox_") then
+        elseif e.element.name:match("^trainworks_routecheckbox_") then
             local routenum = global.gui_selected_route[e.player_index]
-            local stopnum = tonumber(e.element.name:match("^trainworks_checkbox_(.*)$"))
+            local stopnum = tonumber(e.element.name:match("^trainworks_routecheckbox_(.*)$"))
             if e.element.state then
                 route_add_stop(routenum, stopnum)
             else

@@ -421,6 +421,16 @@ function register_stop(stop)
     -- XXX FIXME last_activity should be per-typename and provided vs requested
     global.stops[stop.unit_number] = {stop=stop, chests={}, last_activity=game.tick, actions={}}
     update_stop_chests(stop)
+
+    -- The universal route gets all stops
+    route_add_stop(1, stop.unit_number)
+
+    -- Update the modify pane of the GUI
+    for playernum, player in pairs(game.players) do
+        if global.gui_selected_route[playernum] ~= nil then
+            populate_stops_in_modify(playernum, global.gui_selected_route[playernum])
+        end
+    end
 end
 
 

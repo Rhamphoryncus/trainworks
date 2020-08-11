@@ -116,8 +116,15 @@ end
 
 tasks = {}
 function tasks.cleanup(task)
+    local refresh_modify_gui = false
     for stopnum, x in pairs(global.cleanup_stops) do
+        for routenum, route in pairs(global.routes) do
+            if route.stops[stopnum] ~= nil then
+                route_remove_stop(routenum, stopnum)
+            end
+        end
         global.stops[stopnum] = nil
+        refresh_modify_gui = true
     end
     global.cleanup_stops = {}
 
@@ -146,6 +153,15 @@ function tasks.cleanup(task)
         global.routes[routenum] = nil
     end
     global.cleanup_routes = {}
+
+    if refresh_modify_gui then
+        -- Update the modify pane of the GUI
+        for playernum, player in pairs(game.players) do
+            if global.gui_selected_route[playernum] ~= nil then
+                populate_stops_in_modify(playernum, global.gui_selected_route[playernum])
+            end
+        end
+    end
 
     table.insert(global.route_jobs, {handler="copy_stops"})
 end
