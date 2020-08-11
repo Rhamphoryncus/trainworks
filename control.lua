@@ -9,7 +9,6 @@
 -- Remove unused parts of train status
 -- Consider changing colour or otherwise hilighting trains with error status.  Maybe bold?
 -- Make sure deleting a route orphans any trains it owns
--- Bug: renaming a depot adds a train to the new route but doesn't remove from the old route
 -- Better balancing for wildly unbalanced chests
 -- Generate backer_name for new routes in a way that doesn't create a temporary object (and smoke) at 0,0
 
@@ -37,8 +36,9 @@ script.on_init(function()
             -- want is integer
             -- coming is integer
 
-    global.trains = {}  -- trainid -> {train, src, dest, actions, last_fuel, last_activity}
+    global.trains = {}  -- trainid -> {train, routenum, src, dest, actions, last_fuel, last_activity}
         -- train is train  -- Underlying train handle
+        -- routenum is routenum  -- Route this train is assigned to
         -- src is stop  -- Pickup station
         -- dest is stop  -- Dropoff station
         -- actions is itemname -> amount

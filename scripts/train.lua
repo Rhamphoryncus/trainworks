@@ -169,7 +169,7 @@ function reset_train(trainid, train)
         return
     end
 
-    global.routes[routenum].trains[trainid] = train
+    assign_train(routenum, trainid)
 
     local x = {
         current=1,
@@ -513,6 +513,26 @@ function register_chest(chest)
 end
 
 
+function assign_train(routenum, trainid)
+    if global.trains[trainid].routenum ~= nil then
+        unassign_train(trainid)
+    end
+
+    if routenum ~= nil then
+        global.trains[trainid].routenum = routenum
+        global.routes[routenum].trains[trainid] = global.trains[trainid].train
+    end
+end
+
+function unassign_train(trainid)
+    local routenum = global.trains[trainid].routenum
+    if routenum ~= nil then
+        global.routes[routenum].trains[trainid] = nil
+        global.trains[trainid].routenum = nil
+    end
+end
+
+
 script.on_event({defines.events.on_entity_renamed},
     function (e)
         if e.entity.prototype.name == "trainworks_depot" then
@@ -520,9 +540,7 @@ script.on_event({defines.events.on_entity_renamed},
 
             if train ~= nil and train.state == defines.train_state.wait_station and train.station == e.entity then
                 local routenum = global.route_map[e.entity.backer_name]
-                if routenum ~= nil then
-                    global.routes[routenum].trains[train.id] = train
-                end
+                assign_train(routenum, train.id)
             else
                 global.depot_idletrain[e.entity.unit_number] = nil
             end

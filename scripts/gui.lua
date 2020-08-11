@@ -244,38 +244,29 @@ function populate_train_status(playernum)
 
     local trainid = global.gui_selected_train[playernum]
     if trainid ~= nil then
-        local train = nil
-        -- XXX Find the train
-        for routenum, x in pairs(global.routes) do
-            if x.trains[trainid] ~= nil then
-                train = x.trains[trainid]
-                break
-            end
-        end
+        local train = global.trains[trainid].train
 
-        if train ~= nil then
-            local cargostring = ""
-            if train.schedule.current == 1 then
-                local actions = global.trains[trainid].actions
-                if actions ~= nil then
-                    cargostring = "Intended: " .. generate_cargo_string(actions)
-                else
-                    cargostring = ""
-                end
-            elseif train.schedule.current == 2 then
-                cargostring = generate_cargo_string(merge_inventories(get_train_inventories(train)))
+        local cargostring = ""
+        if train.schedule.current == 1 then
+            local actions = global.trains[trainid].actions
+            if actions ~= nil then
+                cargostring = "Intended: " .. generate_cargo_string(actions)
             else
                 cargostring = ""
             end
-            flow.trainworks_train_cargo.caption = cargostring
-            flow.trainworks_train_fullness.caption = "Not 0"
-
-            local pos = train.locomotives.front_movers[1].position
-            flow.trainworks_train_position.caption = string.format("%i, %i", pos.x, pos.y)  -- This truncates rather than rounding to nearest.  Oh well.
-        
-            flow.trainworks_train_minimap.position = pos
-            flow.trainworks_train_minimap.surface_index = train.locomotives.front_movers[1].surface.index
+        elseif train.schedule.current == 2 then
+            cargostring = generate_cargo_string(merge_inventories(get_train_inventories(train)))
+        else
+            cargostring = ""
         end
+        flow.trainworks_train_cargo.caption = cargostring
+        flow.trainworks_train_fullness.caption = "Not 0"
+
+        local pos = train.locomotives.front_movers[1].position
+        flow.trainworks_train_position.caption = string.format("%i, %i", pos.x, pos.y)  -- This truncates rather than rounding to nearest.  Oh well.
+    
+        flow.trainworks_train_minimap.position = pos
+        flow.trainworks_train_minimap.surface_index = train.locomotives.front_movers[1].surface.index
     end
 end
 
@@ -486,7 +477,10 @@ function rename_route(routenum, text)
     global.route_map[text] = routenum
 
     -- Forget all the trains that were associated with the old name
-    global.routes[routenum].trains = {}
+    -- XXX This modifies the table as we iterate over it but simply removing elements should be safe
+    for trainid, train in pairs(global.routes[routenum].trains) do
+        unassign_train(trainid)
+    end
 
     for playernum, player in pairs(game.players) do
         local listpane = global.gui_routelist[playernum]
