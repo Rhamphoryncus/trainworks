@@ -67,8 +67,8 @@ script.on_init(function()
     global.gui_traintable = {}  -- playernum -> guielement
     global.gui_deleteroute = {}  -- playernum -> guielement
 
-    global.route_index = 1  -- Index number into global.route_jobs
-    global.route_jobs = {}  -- {{handler, ...}, ...}  -- Array of tasks to be performed, one tick at a time
+    global.routing_index = 1  -- Index number into global.routing_jobs
+    global.routing_jobs = {}  -- {{handler, ...}, ...}  -- Array of tasks to be performed, one tick at a time
 
     global.cleanup_stops = {}  -- stopid -> true  -- Stops that were destroyed and need to be untracked
     global.cleanup_trains = {}  -- trainid -> train  -- Trains that were destroyed and need to be untracked

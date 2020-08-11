@@ -163,17 +163,17 @@ function tasks.cleanup(task)
         end
     end
 
-    table.insert(global.route_jobs, {handler="copy_stops"})
+    table.insert(global.routing_jobs, {handler="copy_stops"})
 end
 
 
 function tasks.copy_stops(task)
     -- Make a copy of global.stops keys but in a dense array form
     for stopnum, x in pairs(global.stops) do
-        table.insert(global.route_jobs, {handler="calculate_values", stopnum=stopnum})
+        table.insert(global.routing_jobs, {handler="calculate_values", stopnum=stopnum})
     end
 
-    table.insert(global.route_jobs, {handler="copy_reqprov_routes"})
+    table.insert(global.routing_jobs, {handler="copy_reqprov_routes"})
 end
 
 
@@ -186,7 +186,7 @@ end
 function tasks.copy_reqprov_routes(task)
     -- Make a copy of global.routes but in a dense array form
     for routenum, route in pairs(global.routes) do
-        table.insert(global.route_jobs, {handler="update_reqprov", routenum=routenum})
+        table.insert(global.routing_jobs, {handler="update_reqprov", routenum=routenum})
 
         if route.dirty then
             -- If a stop was removed from the route we need to reset requested/provided
@@ -196,7 +196,7 @@ function tasks.copy_reqprov_routes(task)
         end
     end
 
-    table.insert(global.route_jobs, {handler="copy_service_routes"})
+    table.insert(global.routing_jobs, {handler="copy_service_routes"})
 end
 
 
@@ -212,13 +212,13 @@ end
 
 
 function process_routes()
-    local task = global.route_jobs[global.route_index]
-    global.route_index = global.route_index + 1
+    local task = global.routing_jobs[global.routing_index]
+    global.routing_index = global.routing_index + 1
     if task == nil then
         -- Reset and start a new pass
-        global.route_index = 1
-        global.route_jobs = {}
-        table.insert(global.route_jobs, {handler="cleanup"})
+        global.routing_index = 1
+        global.routing_jobs = {}
+        table.insert(global.routing_jobs, {handler="cleanup"})
     else
         --mod_gui.get_button_flow(game.players[1]).trainworks_top_button.caption = task.handler
         tasks[task.handler](task)
@@ -265,7 +265,7 @@ function tasks.copy_service_routes(task)
 
     -- Make a copy of global.routes but in a dense array form
     for routenum, route in pairs(global.routes) do
-        table.insert(global.route_jobs, {handler="service_route_requests", routenum=routenum})
+        table.insert(global.routing_jobs, {handler="service_route_requests", routenum=routenum})
     end
 end
 
@@ -301,7 +301,7 @@ function tasks.service_route_requests(task)
         end
     end
 
-    table.insert(global.route_jobs, {handler="update_gui"})
+    table.insert(global.routing_jobs, {handler="update_gui"})
 end
 
 
