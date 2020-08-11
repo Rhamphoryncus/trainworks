@@ -1,8 +1,6 @@
 -- Todo:
 -- Handle destruction of entities.  Probably just .valid checks and add them to a global "delete me" table to be processed later?  Trains are done but stops and depots are still needed.
 -- Add profiling hooks
--- Add a hardcoded route 1 as universal to share reqprov with all universal routes
--- Add GUI buttons for creating new routes and deleting empty routes
 -- Rebalance weights
 -- Add provider/requester priorities to routes
 -- Add provider/requester priorities to stops
@@ -13,9 +11,9 @@
 -- Make sure deleting a route orphans any trains it owns
 -- Make newly placed stops immediately get added to the GUI, both the stationpane and modifypane
 -- Make the universal route explicitly contain all stops, not just implicitly
--- Allow quick replacing between train-stop types
 -- Bug: renaming a depot adds a train to the new route but doesn't remove from the old route
 -- Better balancing for wildly unbalanced chests
+-- Generate backer_name for new routes in a way that doesn't create a temporary object (and smoke) at 0,0
 
 
 require("scripts.util")

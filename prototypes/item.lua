@@ -1,6 +1,15 @@
+-- Patch the vanilla train-stop to be in face replacement group
+local fastreplace = data.raw["train-stop"]["train-stop"].fast_replaceable_group
+if fastreplace == nil then
+    fastreplace = "train-stop"
+    data.raw["train-stop"]["train-stop"].fast_replaceable_group = fastreplace
+end
+
+
 local depot = table.deepcopy(data.raw["train-stop"]["train-stop"])
 depot.name = "trainworks_depot"
 depot.color = {a=0.5, r=0, g=0, b=0.95}
+depot.fast_replaceable_group = fastreplace
 
 local depot_item = table.deepcopy(data.raw.item["train-stop"])
 depot_item.name = "trainworks_depot"
@@ -18,6 +27,7 @@ data:extend{depot, depot_item, depot_recipe}
 local stop = table.deepcopy(data.raw["train-stop"]["train-stop"])
 stop.name = "trainworks_stop"
 stop.color = {a=0.5, r=0.75, g=0.5, b=0}
+stop.fast_replaceable_group = fastreplace
 
 local stop_item = table.deepcopy(data.raw.item["train-stop"])
 stop_item.name = "trainworks_stop"
