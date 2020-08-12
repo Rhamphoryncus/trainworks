@@ -83,8 +83,9 @@ function populate_status(playernum)
     local traintab = tabs.add{type="tab", name="trainworks_traintab", caption={"gui.traintab"}}
 
     -- List of routes to select from
-    local routepane = tabs.add{type="scroll-pane", name="trainworks_routepane", vertical_scroll_policy="auto-and-reserve-space"}
-    tabs.add_tab(routetab, routepane)
+    local routeflow = tabs.add{type="flow", name="trainworks_routeflow", direction="vertical"}
+    tabs.add_tab(routetab, routeflow)
+    local routepane = routeflow.add{type="scroll-pane", name="trainworks_routepane", vertical_scroll_policy="auto-and-reserve-space"}
     local first = nil
     for routenum, route in pairs(global.routes) do
         local caption = route.name
@@ -97,11 +98,11 @@ function populate_status(playernum)
         end
     end
     global.gui_routelist[playernum] = routepane
+    routeflow.add{type="button", name="trainworks_newroute", caption={"gui.newroute"}}
 
     -- Stops within the selected route
     -- XXX FIXME this should swap out for train status
     local stationflow = frame.add{type="flow", name="trainworks_stationflow", direction="vertical"}
-    stationflow.add{type="button", name="trainworks_newroute", caption={"gui.newroute"}}
     stationflow.add{type="button", name="trainworks_showmodify", caption={"gui.showmodify"}}
     local statuspane = stationflow.add{type="scroll-pane", name="trainworks_stationpane", vertical_scroll_policy="auto-and-reserve-space"}
     global.gui_routestatus[playernum] = statuspane
@@ -146,7 +147,7 @@ function select_route(playernum, routenum)
     local status = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status
 
     -- Unset all the radiobuttons
-    local pane = status.trainworks_tabs.trainworks_routepane
+    local pane = status.trainworks_tabs.trainworks_routeflow.trainworks_routepane
     for childname, child in pairs(pane.children) do
         child.state = false
     end

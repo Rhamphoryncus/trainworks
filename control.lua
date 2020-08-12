@@ -8,10 +8,8 @@
 -- Make stopchest's last_activity be per-typename
 -- Remove unused parts of train status
 -- Consider changing colour or otherwise hilighting trains with error status.  Maybe bold?
--- Make sure deleting a route orphans any trains it owns
 -- Better balancing for wildly unbalanced chests
 -- Generate backer_name for new routes in a way that doesn't create a temporary object (and smoke) at 0,0
--- The "new route" button should be under the route tab somewhere, not the status pane
 
 
 require("scripts.util")
