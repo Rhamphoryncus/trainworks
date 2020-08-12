@@ -147,7 +147,10 @@ function tasks.cleanup(task)
             end
         end
     
-        -- XXX FIXME do something to orphan all trains servicing this route
+        -- Unassign the trains
+        for trainid, train in pairs(global.routes[routenum].trains) do
+            unassign_train(trainid)
+        end
 
         global.route_map[global.routes[routenum].name] = nil
         global.routes[routenum] = nil
