@@ -109,10 +109,10 @@ function populate_status(playernum)
 
     -- Detailed status of selected train
     local trainflow = frame.add{type="flow", name="trainworks_trainflow", direction="vertical"}
-    trainflow.add{type="label", name="trainworks_train_cargo", caption="Test cargo"}
-    trainflow.add{type="label", name="trainworks_train_fullness", caption="Test fullness"}
-    trainflow.add{type="label", name="trainworks_train_position", caption="Test position"}
+    trainflow.add{type="button", name="trainworks_train_opengui", caption={"gui.train_opengui"}}
     local minimap = trainflow.add{type="minimap", name="trainworks_train_minimap"}
+    trainflow.add{type="label", name="trainworks_train_plannedcargo", caption=""}
+    trainflow.add{type="label", name="trainworks_train_actualcargo", caption=""}
 
     -- Various trains servicing routes
     local trainlistflow = tabs.add{type="flow", name="trainworks_trainlistflow", direction="vertical"}
@@ -247,26 +247,21 @@ function populate_train_status(playernum)
     if trainid ~= nil then
         local train = global.trains[trainid].train
 
-        local cargostring = ""
-        if train.schedule.current == 1 then
-            local actions = global.trains[trainid].actions
-            if actions ~= nil then
-                cargostring = "Intended: " .. generate_cargo_string(actions)
-            else
-                cargostring = ""
-            end
-        elseif train.schedule.current == 2 then
-            cargostring = generate_cargo_string(merge_inventories(get_train_inventories(train)))
-        else
-            cargostring = ""
+        local plannedcargo = ""
+        local actions = global.trains[trainid].actions
+        if actions ~= nil then
+            plannedcargo = {"gui.train_cargo_planned", generate_cargo_string(actions)}
         end
-        flow.trainworks_train_cargo.caption = cargostring
-        flow.trainworks_train_fullness.caption = "Not 0"
+        flow.trainworks_train_plannedcargo.caption = plannedcargo
 
-        local pos = train.locomotives.front_movers[1].position
-        flow.trainworks_train_position.caption = string.format("%i, %i", pos.x, pos.y)  -- This truncates rather than rounding to nearest.  Oh well.
-    
-        flow.trainworks_train_minimap.position = pos
+        local actualcargo = ""
+        local inv = merge_inventories(get_train_inventories(train))
+        if next(inv) ~= nil then
+            actualcargo = {"gui.train_cargo_actual", generate_cargo_string(inv)}
+        end
+        flow.trainworks_train_actualcargo.caption = actualcargo
+
+        flow.trainworks_train_minimap.position = train.locomotives.front_movers[1].position
         flow.trainworks_train_minimap.surface_index = train.locomotives.front_movers[1].surface.index
     end
 end
@@ -284,8 +279,9 @@ end
 function populate_modify(playernum, routenum)
     local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_modify
     local flow = frame.add{type="flow", name="trainworks_modifyflow", direction="vertical"}
-    flow.add{type="textfield", name="trainworks_modifyname", text=global.routes[routenum].name}
-    local button = flow.add{type="button", name="trainworks_deleteroute", caption={"gui.deleteroute"}, tooltip={"gui.deleteroute_tooltip"}}
+    local top = flow.add{type="flow", direction="horizontal"}
+    top.add{type="textfield", name="trainworks_modifyname", text=global.routes[routenum].name}
+    local button = top.add{type="button", name="trainworks_deleteroute", caption={"gui.deleteroute"}, tooltip={"gui.deleteroute_tooltip"}}
     if #global.routes[routenum] > 0 or routenum == 1 then
         button.enabled = false
     end
@@ -426,6 +422,8 @@ script.on_event({defines.events.on_gui_click},
             e.element.parent.trainworks_trainmode_issues.state = false
         elseif e.element.name == "trainworks_trainmode_issues" then
             e.element.parent.trainworks_trainmode_all.state = false
+        elseif e.element.name == "trainworks_train_opengui" then
+            player.opened = global.trains[global.gui_selected_train[e.player_index]].train.locomotives.front_movers[1]
         elseif e.element.name == "trainworks_showmodify" then
             local routenum = global.gui_selected_route[e.player_index]
             local frame = mod_gui.get_frame_flow(player).trainworks_modify

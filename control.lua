@@ -10,7 +10,6 @@
 -- Consider changing colour or otherwise hilighting trains with error status.  Maybe bold?
 -- Better balancing for wildly unbalanced chests
 -- Generate backer_name for new routes in a way that doesn't create a temporary object (and smoke) at 0,0
--- Figure out GUI styles
 -- Add "open train" and "open stop" buttons to trains
 
 
