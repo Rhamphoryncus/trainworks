@@ -85,7 +85,7 @@ function populate_status(playernum)
     -- List of routes to select from
     local routeflow = tabs.add{type="flow", name="trainworks_routeflow", direction="vertical"}
     tabs.add_tab(routetab, routeflow)
-    local routepane = routeflow.add{type="scroll-pane", name="trainworks_routepane", vertical_scroll_policy="auto-and-reserve-space"}
+    local routepane = routeflow.add{type="scroll-pane", name="trainworks_routepane", vertical_scroll_policy="auto-and-reserve-space", style="trainworks_scroll_pane"}
     local first = nil
     for routenum, route in pairs(global.routes) do
         local caption = route.name
@@ -104,7 +104,7 @@ function populate_status(playernum)
     -- XXX FIXME this should swap out for train status
     local stationflow = frame.add{type="flow", name="trainworks_stationflow", direction="vertical"}
     stationflow.add{type="button", name="trainworks_showmodify", caption={"gui.showmodify"}}
-    local statuspane = stationflow.add{type="scroll-pane", name="trainworks_stationpane", vertical_scroll_policy="auto-and-reserve-space"}
+    local statuspane = stationflow.add{type="scroll-pane", name="trainworks_stationpane", vertical_scroll_policy="auto-and-reserve-space", style="trainworks_scroll_pane"}
     global.gui_routestatus[playernum] = statuspane
 
     -- Detailed status of selected train
@@ -124,7 +124,7 @@ function populate_status(playernum)
     local modeall = trainmodeflow.add{type="radiobutton", name="trainworks_trainmode_all", state=false, caption={"gui.trainmode_all"}}
     local modeissues = trainmodeflow.add{type="radiobutton", name="trainworks_trainmode_issues", state=true, caption={"gui.trainmode_issues"}}
     trainlistflow.add{type="textfield", name="trainworks_trainfilter", tooltip={"gui.trainfilter"}}
-    local trainpane = trainlistflow.add{type="scroll-pane", name="trainworks_trainpane", vertical_scroll_policy="auto-and-reserve-space"}
+    local trainpane = trainlistflow.add{type="scroll-pane", name="trainworks_trainpane", vertical_scroll_policy="auto-and-reserve-space", style="trainworks_scroll_pane"}
     local traintable = trainpane.add{type="table", name="trainworks_traintable", column_count=2}
     global.gui_traintable[playernum] = traintable
     populate_train_list(playernum)
@@ -294,7 +294,7 @@ function populate_modify(playernum, routenum)
     global.gui_deleteroute[playernum] = button
 
     -- List of stations that could be added to this route
-    local toppane = flow.add{type="scroll-pane", name="trainworks_modifypane", vertical_scroll_policy="auto-and-reserve-space"}
+    local toppane = flow.add{type="scroll-pane", name="trainworks_modifypane", vertical_scroll_policy="auto-and-reserve-space", style="trainworks_scroll_pane"}
     populate_stops_in_modify(playernum, routenum)
 
     frame.visible = true

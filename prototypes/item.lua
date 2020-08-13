@@ -1,4 +1,4 @@
--- Patch the vanilla train-stop to be in face replacement group
+-- Patch the vanilla train-stop to be in a fast replacement group
 local fastreplace = data.raw["train-stop"]["train-stop"].fast_replaceable_group
 if fastreplace == nil then
     fastreplace = "train-stop"

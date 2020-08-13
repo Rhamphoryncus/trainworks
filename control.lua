@@ -1,5 +1,5 @@
 -- Todo:
--- Handle destruction of entities.  Probably just .valid checks and add them to a global "delete me" table to be processed later?  Trains are done but stops and depots are still needed.
+-- Handle destruction of entities.  Probably just .valid checks and add them to a global "delete me" table to be processed later?  Trains, stops, and routes are done but depots are still needed.
 -- Add profiling hooks
 -- Rebalance weights
 -- Add provider/requester priorities to routes
@@ -10,6 +10,8 @@
 -- Consider changing colour or otherwise hilighting trains with error status.  Maybe bold?
 -- Better balancing for wildly unbalanced chests
 -- Generate backer_name for new routes in a way that doesn't create a temporary object (and smoke) at 0,0
+-- Figure out GUI styles
+-- Add "open train" and "open stop" buttons to trains
 
 
 require("scripts.util")
