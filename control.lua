@@ -49,7 +49,7 @@ script.on_init(function()
         -- actions is itemname -> amount
         -- last_fuel is itemname -> amount  -- Amount of fuel on locomotives last time we looked
         -- last_activity is tick  -- Game tick when we last loaded fuel
-    global.trains_dirty = {}  -- Resort/refresh of GUI required due to new train or route reassignment
+    global.trains_dirty = false  -- Resort/refresh of GUI required due to new train or route reassignment
     global.depot_idletrain = {}  -- stopnum -> train  -- Train idling at each stop
 
     global.routes = {}  -- routenum -> {name, trains, stops, provided, requested}

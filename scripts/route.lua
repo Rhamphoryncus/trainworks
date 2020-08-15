@@ -223,7 +223,7 @@ function process_routes()
         global.routing_jobs = {}
         table.insert(global.routing_jobs, {handler="cleanup"})
     else
-        --mod_gui.get_button_flow(game.players[1]).trainworks_top_button.caption = task.handler
+        --mod_gui.get_button_flow(game.players[1]).trainworks_top_button.caption = task.handler  -- XXX bodge to show current task
         tasks[task.handler](task)
     end
 end
@@ -309,5 +309,25 @@ end
 
 
 function tasks.update_gui(task)
-    update_gui()
+    if global.trains_dirty then
+        update_gui()
+        global.trains_dirty = false
+    end
+
+    for playernum, player in pairs(game.players) do
+        update_train_status(playernum)
+    end
+
+    for trainid, x in pairs(global.trains) do
+        table.insert(global.routing_jobs, {handler="update_gui_train", trainid=trainid})
+    end
+end
+
+
+function tasks.update_gui_train(task)
+    local trainid = task.trainid
+
+    for playernum, player in pairs(game.players) do
+        update_train_list_train(playernum, trainid)
+    end
 end

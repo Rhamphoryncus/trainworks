@@ -202,29 +202,21 @@ function populate_train_list(playernum)
     local traintable = global.gui_traintable[playernum]
     local selectedid = global.gui_selected_train[playernum]
 
-    -- XXX convert to two passes
-    -- First pass is only if global.trains_dirty is set.  Clears the list, refreshes the names, leaves status empty
-    -- Second pass refreshes the status.  Not to be confused with the status window.
-
     -- Clear first
     -- XXX Minor bug: if the player holds down the radiobutton that will get reset
     traintable.clear()
 
     -- Then readd the list of trains
-    for trainid, x in pairs(global.trains) do
-        local routename = global.routes[x.routenum].name
-        local train = x.train
+    for trainid, trainobj in pairs(global.trains) do
+        local routename = global.routes[trainobj.routenum].name
+        local train = trainobj.train
         local issue = false
         local visible = false
 
         if not train.valid then
             global.cleanup_trains[trainid] = train
         else
-            if x.issue or not issuesmode then
-                visible = true
-            elseif filter == "" then
-                -- Empty filter counts as no match
-            elseif string.find(routename, filter, 1, true) ~= nil or string.find(tostring(trainid), filter, 1, true) ~= nil then
+            if (trainobj.issue or not issuesmode) and (string.find(routename, filter, 1, true) ~= nil or string.find(tostring(trainid), filter, 1, true) ~= nil) then
                 visible = true
             end
 
@@ -234,52 +226,61 @@ function populate_train_list(playernum)
                 state = true
             end
             traintable.add{type="radiobutton", name=("trainworks_trainbutton_"..trainid), visible=visible, state=state, caption=caption}
-            traintable.add{type="label", name=("trainworks_trainlabel_"..trainid), visible=visible, caption=x.status}
+            traintable.add{type="label", name=("trainworks_trainlabel_"..trainid), visible=visible, caption=trainobj.status}
         end
     end
-
-    -- Update the statuses
-    for trainid, x in pairs(global.trains) do
-        local button = traintable[("trainworks_trainbutton_"..trainid)]
-        local label = traintable[("trainworks_trainlabel_"..trainid)]
-
-        if label ~= nil then
-            local routename = global.routes[x.routenum].name
-            local train = x.train
-            local status = ""
-            local issue = false
-            local visible = false
-
-            issue, status = train_status_garbage(trainid, train)
-            if status == "" then
-                issue, status = train_status_error(trainid, train)
-            end
-            if status == "" then
-                -- XXX Minor bug: updates idle time as a side effect
-                issue, status = train_status_refueling(trainid, train)
-            end
-
-            if issue or not issuesmode then
-                visible = true
-            elseif filter == "" then
-                -- Empty filter counts as no match
-            elseif string.find(routename, filter, 1, true) ~= nil or string.find(tostring(trainid), filter, 1, true) ~= nil then
-                visible = true
-            end
-
-            x.status = status
-            x.error = issue
-            button.visible = visible
-            label.visible = visible
-            label.caption = status
-        end
-    end
-
-    populate_train_status(playernum)
 end
 
-function populate_train_status(playernum)
-    local flow = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status.trainworks_trainflow
+function update_train_list_train(playernum, trainid)
+    local status = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status
+    if not status.visible then
+        return
+    end
+
+    local trainlistflow = status.trainworks_tabs.trainworks_trainlistflow
+    local trainobj = global.trains[trainid]
+    local filter = trainlistflow.trainworks_trainfilter.text
+    local issuesmode = trainlistflow.trainworks_trainmodeflow.trainworks_trainmode_issues.state
+    local traintable = global.gui_traintable[playernum]
+
+    local button = traintable[("trainworks_trainbutton_"..trainid)]
+    local label = traintable[("trainworks_trainlabel_"..trainid)]
+
+    if label ~= nil then
+        local routename = global.routes[trainobj.routenum].name
+        local train = trainobj.train
+        local status = ""
+        local issue = false
+        local visible = false
+
+        issue, status = train_status_garbage(trainid, train)
+        if status == "" then
+            issue, status = train_status_error(trainid, train)
+        end
+        if status == "" then
+            -- XXX Minor bug: updates idle time as a side effect
+            issue, status = train_status_refueling(trainid, train)
+        end
+
+        if (issue or not issuesmode) and (string.find(routename, filter, 1, true) ~= nil or string.find(tostring(trainid), filter, 1, true) ~= nil) then
+            visible = true
+        end
+
+        trainobj.status = status
+        trainobj.issue = issue
+        button.visible = visible
+        label.visible = visible
+        label.caption = status
+    end
+end
+
+function update_train_status(playernum)
+    local status = mod_gui.get_frame_flow(game.players[playernum]).trainworks_status
+    if not status.visible then
+        return
+    end
+
+    local flow = status.trainworks_trainflow
 
     local trainid = global.gui_selected_train[playernum]
     if trainid ~= nil then
