@@ -202,40 +202,76 @@ function populate_train_list(playernum)
     local traintable = global.gui_traintable[playernum]
     local selectedid = global.gui_selected_train[playernum]
 
+    -- XXX convert to two passes
+    -- First pass is only if global.trains_dirty is set.  Clears the list, refreshes the names, leaves status empty
+    -- Second pass refreshes the status.  Not to be confused with the status window.
+
     -- Clear first
     -- XXX Minor bug: if the player holds down the radiobutton that will get reset
     traintable.clear()
 
     -- Then readd the list of trains
-    for routenum, x in pairs(global.routes) do
-        local routename = global.routes[routenum].name
-        for trainid, train in pairs(x.trains) do
-            local status = ""
-            local issue = false
-            if train_status_garbage(trainid, train) then
-                status = {"gui.train_status_garbage"}
-                issue = true
-            elseif train_status_error(trainid, train) then
-                issue, status = train_status_error(trainid, train)
-            elseif train_status_refueling(trainid, train) then  -- XXX Minor bug: updates idle time as a side effect
-                status = {"gui.train_status_refueling"}
+    for trainid, x in pairs(global.trains) do
+        local routename = global.routes[x.routenum].name
+        local train = x.train
+        local issue = false
+        local visible = false
+
+        if not train.valid then
+            global.cleanup_trains[trainid] = train
+        else
+            if x.issue or not issuesmode then
+                visible = true
+            elseif filter == "" then
+                -- Empty filter counts as no match
+            elseif string.find(routename, filter, 1, true) ~= nil or string.find(tostring(trainid), filter, 1, true) ~= nil then
+                visible = true
             end
 
-            if not train.valid then
-                global.cleanup_trains[trainid] = train
-            elseif string.find(routename, filter, 1, true) == nil and string.find(tostring(trainid), filter, 1, true) == nil then
-                -- Skip this train
-            elseif issuesmode and not issue then
-                -- Skip this train
-            else
-                local caption={"gui.trainbutton", routename, trainid}
-                local state = false
-                if trainid == selectedid then
-                    state = true
-                end
-                traintable.add{type="radiobutton", name=("trainworks_trainbutton_"..trainid), state=state, caption=caption}
-                traintable.add{type="label", name=("trainworks_trainlabel_"..trainid), caption=status}
+            local caption={"gui.trainbutton", routename, trainid}
+            local state = false
+            if trainid == selectedid then
+                state = true
             end
+            traintable.add{type="radiobutton", name=("trainworks_trainbutton_"..trainid), visible=visible, state=state, caption=caption}
+            traintable.add{type="label", name=("trainworks_trainlabel_"..trainid), visible=visible, caption=x.status}
+        end
+    end
+
+    -- Update the statuses
+    for trainid, x in pairs(global.trains) do
+        local button = traintable[("trainworks_trainbutton_"..trainid)]
+        local label = traintable[("trainworks_trainlabel_"..trainid)]
+
+        if label ~= nil then
+            local routename = global.routes[x.routenum].name
+            local train = x.train
+            local status = ""
+            local issue = false
+            local visible = false
+
+            issue, status = train_status_garbage(trainid, train)
+            if status == "" then
+                issue, status = train_status_error(trainid, train)
+            end
+            if status == "" then
+                -- XXX Minor bug: updates idle time as a side effect
+                issue, status = train_status_refueling(trainid, train)
+            end
+
+            if issue or not issuesmode then
+                visible = true
+            elseif filter == "" then
+                -- Empty filter counts as no match
+            elseif string.find(routename, filter, 1, true) ~= nil or string.find(tostring(trainid), filter, 1, true) ~= nil then
+                visible = true
+            end
+
+            x.status = status
+            x.error = issue
+            button.visible = visible
+            label.visible = visible
+            label.caption = status
         end
     end
 

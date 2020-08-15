@@ -2,30 +2,32 @@
 
 
 function train_status_refueling(trainid, train)
+    local status_bad = {"gui.train_status_refueling"}
+
     -- XXX Minor bug: last_fuel doesn't get updated when there isn't a job being dispatched.  However, this is harmless so long as fuel is always being maintained as full, which is the normal case.
     if train.state ~= defines.train_state.wait_station
             or train.station == nil
             or train.station.prototype.name ~= "trainworks_depot"
             then
-        return false
+        return false, ""
     end
 
     local fuel = merge_inventories(get_train_fuels(train))
     if global.trains[trainid].last_fuel == nil or not compare_dictionaries(fuel, global.trains[trainid].last_fuel) then
         global.trains[trainid].last_fuel = fuel
         global.trains[trainid].last_activity = game.tick
-        return true
+        return true, status_bad
     end
 
     if global.trains[trainid].last_activity > game.tick - 120 then
-        return true
+        return true, status_bad
     end
 
     for x, loco in pairs(train.locomotives.front_movers) do
         local inv = loco.get_inventory(defines.inventory.fuel)
         local empty = inv.count_empty_stacks{include_filtered=true}
         if empty > 0 then
-            return true
+            return true, status_bad
         end
     end
 
@@ -33,11 +35,11 @@ function train_status_refueling(trainid, train)
         local inv = loco.get_inventory(defines.inventory.fuel)
         local empty = inv.count_empty_stacks{include_filtered=true}
         if empty > 0 then
-            return true
+            return true, status_bad
         end
     end
 
-    return false
+    return false, ""
 end
 
 function train_status_garbage(trainid, train)
@@ -45,17 +47,17 @@ function train_status_garbage(trainid, train)
             or train.station == nil
             or train.station.prototype.name ~= "trainworks_depot"
             then
-        return false
+        return false, ""
     end
 
     for x, wagon in pairs(train.cargo_wagons) do
         local inv = wagon.get_inventory(defines.inventory.cargo_wagon)
         if not inv.is_empty() then
-            return true
+            return true, {"gui.train_status_garbage"}
         end
     end
 
-    return false
+    return false, ""
 end
 
 function train_status_error(trainid, train)
@@ -66,7 +68,7 @@ function train_status_error(trainid, train)
     elseif train.state == defines.train_state.manual_control or train.state == defines.train_state_manual_control_stop then
         return true, {"gui.train_status_manual"}
     else
-        return false
+        return false, ""
     end
 end
 
@@ -139,7 +141,8 @@ end
 
 function reset_train(trainid, train)
     if global.trains[trainid] == nil then
-        global.trains[trainid] = {train=train}
+        global.trains[trainid] = {train=train, status="", issue=false}
+        global.trains_dirty = true
     else
         if global.trains[trainid].src ~= nil then
             global.stops[global.trains[trainid].src.unit_number].actions[trainid] = nil  -- Delete the pickup action

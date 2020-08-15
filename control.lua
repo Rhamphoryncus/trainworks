@@ -41,6 +41,8 @@ script.on_init(function()
 
     global.trains = {}  -- trainid -> {train, routenum, src, dest, actions, last_fuel, last_activity}
         -- train is train  -- Underlying train handle
+        -- status is LocalisedString  -- Translatable string for train status
+        -- issue is boolean  -- If the status indicates an error state
         -- routenum is routenum  -- Route this train is assigned to
         -- src is stop  -- Pickup station
         -- dest is stop  -- Dropoff station
