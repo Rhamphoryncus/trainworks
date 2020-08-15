@@ -141,6 +141,8 @@ function clear_status(playernum)
     frame.visible = false
     frame.clear()
     global.gui_routelist[playernum] = nil
+    global.gui_routestatus[playernum] = nil
+    global.gui_traintable[playernum] = nil
 end
 
 function select_route(playernum, routenum)

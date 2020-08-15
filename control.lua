@@ -6,12 +6,15 @@
 -- Add provider/requester priorities to stops
 -- Handle migration/reset parts of the mod on version changes
 -- Make stopchest's last_activity be per-typename
--- Remove unused parts of train status
 -- Consider changing colour or otherwise hilighting trains with error status.  Maybe bold?
 -- Better balancing for wildly unbalanced chests
 -- Generate backer_name for new routes in a way that doesn't create a temporary object (and smoke) at 0,0
--- Add "open train" and "open stop" buttons to trains
+-- populate_train_list needs to be incrementalized.  New trains and route reassignments should be in a single batch.  Updating the status should be done incrementally.
+-- Needs a global.trains_dirty to indicate a new train was added or a route reassigned and the list must be rebuilt
 
+
+-- Attempt to load the profiler, ignore any errors if it doesn't exist
+pcall(require, "__profiler__/profiler.lua")
 
 require("scripts.util")
 require("scripts.train")
@@ -44,6 +47,7 @@ script.on_init(function()
         -- actions is itemname -> amount
         -- last_fuel is itemname -> amount  -- Amount of fuel on locomotives last time we looked
         -- last_activity is tick  -- Game tick when we last loaded fuel
+    global.trains_dirty = {}  -- Resort/refresh of GUI required due to new train or route reassignment
     global.depot_idletrain = {}  -- stopnum -> train  -- Train idling at each stop
 
     global.routes = {}  -- routenum -> {name, trains, stops, provided, requested}

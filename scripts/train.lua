@@ -521,6 +521,8 @@ function assign_train(routenum, trainid)
     if routenum ~= nil then
         global.trains[trainid].routenum = routenum
         global.routes[routenum].trains[trainid] = global.trains[trainid].train
+
+        global.trains_dirty = true
     end
 end
 
@@ -529,6 +531,8 @@ function unassign_train(trainid)
     if routenum ~= nil then
         global.routes[routenum].trains[trainid] = nil
         global.trains[trainid].routenum = nil
+
+        global.trains_dirty = true
     end
 end
 
