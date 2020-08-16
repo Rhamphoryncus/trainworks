@@ -482,24 +482,15 @@ script.on_event({defines.events.on_gui_click},
                 route_remove_stop(routenum, stopnum)
             end
         elseif e.element.name == "trainworks_newroute" then
-            game.print("new route")
             new_route()
         elseif e.element.name == "trainworks_deleteroute" then
             local routenum = global.gui_selected_route[e.player_index]
             if routenum == 1 then
                 game.print("Can't delete universal route (should be impossible)")
             else
-                game.print("delete route")
                 global.cleanup_routes[routenum] = true
             end
         end
-    end
-)
-
-
-script.on_event({defines.events.on_gui_text_changed},
-    function (e)
-        --game.print("Text changed by " .. fstr(e.player_index) .. ": " .. fstr(e.element.text))
     end
 )
 

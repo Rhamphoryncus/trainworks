@@ -9,8 +9,7 @@
 -- Consider changing colour or otherwise hilighting trains with error status.  Maybe bold?
 -- Better balancing for wildly unbalanced chests
 -- Generate backer_name for new routes in a way that doesn't create a temporary object (and smoke) at 0,0
--- populate_train_list needs to be incrementalized.  New trains and route reassignments should be in a single batch.  Updating the status should be done incrementally.
--- Needs a global.trains_dirty to indicate a new train was added or a route reassigned and the list must be rebuilt
+-- update_train_list_train's updating of train status/issue should be done in a separate pass, independent of the player
 
 
 -- Attempt to load the profiler, ignore any errors if it doesn't exist
