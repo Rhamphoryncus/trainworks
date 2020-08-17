@@ -17,7 +17,6 @@ depot_item.place_result = "trainworks_depot"
 depot_item.icon = "__Trainworks__/graphics/depot.png"
 
 local depot_recipe = table.deepcopy(data.raw.recipe["train-stop"])
-depot_recipe.enabled = true
 depot_recipe.name = "trainworks_depot"
 depot_recipe.result = "trainworks_depot"
 
@@ -35,7 +34,6 @@ stop_item.place_result = "trainworks_stop"
 stop_item.icon = "__Trainworks__/graphics/stop.png"
 
 local stop_recipe = table.deepcopy(data.raw.recipe["train-stop"])
-stop_recipe.enabled = true
 stop_recipe.name = "trainworks_stop"
 stop_recipe.result = "trainworks_stop"
 
@@ -63,7 +61,6 @@ chest_item.name = "trainworks_chest_horizontal"
 chest_item.place_result = "trainworks_chest_horizontal"
 
 local chest_recipe = table.deepcopy(data.raw.recipe["iron-chest"])
-chest_recipe.enabled = true
 chest_recipe.name = "trainworks_chest_horizontal"
 chest_recipe.result = "trainworks_chest_horizontal"
 
@@ -91,7 +88,6 @@ chest_item.name = "trainworks_chest_vertical"
 chest_item.place_result = "trainworks_chest_vertical"
 
 local chest_recipe = table.deepcopy(data.raw.recipe["iron-chest"])
-chest_recipe.enabled = true
 chest_recipe.name = "trainworks_chest_vertical"
 chest_recipe.result = "trainworks_chest_vertical"
 
