@@ -101,19 +101,18 @@ function train_is_idling(trainid, train)
 end
 
 
-function dispatch_train(routenum, sourcenum, destnum, actions)
-    local train = nil
-    for maybetrainid, maybetrain in pairs(global.routes[routenum].trains) do
-        if train_is_idling(maybetrainid, maybetrain) then
-            train = maybetrain
-            break
+function find_idling_train(routenum)
+    for trainid, train in pairs(global.routes[routenum].trains) do
+        if train_is_idling(trainid, train) then
+            return train
         end
     end
-    if train == nil then
-        -- No train available
-        return
-    end
 
+    return nil  -- No train available
+end
+
+
+function dispatch_train(train, sourcenum, destnum, actions)
     global.depot_idletrain[train.station.unit_number] = nil
 
     local source = global.stops[sourcenum].stop
@@ -299,6 +298,17 @@ function merge_inventories(invs)
 
     return contents
 end
+
+function count_inventory_slots(invs)
+    local count = 0
+
+    for i, inv in pairs(invs) do
+        count = count + #inv
+    end
+
+    return count
+end
+
 
 function action_train(train)
     -- Load/unload the train as it arrives at a station

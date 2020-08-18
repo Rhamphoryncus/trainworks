@@ -253,9 +253,12 @@ function calc_provider_weight(reqstopnum, provstopnum, itemname, wanted, have, w
         weights.shortage_threshold = -1
     end
 
-    -- XXX FIXME penalize for loads smaller than the train's capacity
+    -- Requester is getting close to empty
+    -- XXX FIXME
+    -- 
+
+    -- Insufficient to fill the train's wagons
     local stacksize = game.item_prototypes[itemname].stack_size
-    --get_train_inventories(train)
     local maximum = stacksize * wagon_slots
     local actual = math.min(wanted, have)
     if actual < maximum then
@@ -291,13 +294,16 @@ function tasks.service_route_requests(task)
 
     for itemname, stops in pairs(global.routes[routenum].requested) do
         for stopnum, amount in pairs(stops) do
-            -- XXX cap wanted amount by train size
+            local train = find_idling_train(routenum)
             local pstops = global.routes[routenum].provided[itemname]
-            if pstops ~= nil then
+            if train ~= nil and pstops ~= nil then
                 local bestweight = -100  -- Doubles as a threshold for having no good providers
                 local beststopnum = nil
                 local bestamount = nil
-                local wagon_slots = 40  -- XXX FIXME huge bodge
+                local wagon_slots = count_inventory_slots(get_train_inventories(train))
+
+                -- Cap wanted amount by train size
+                amount = math.min(amount, wagon_slots * game.item_prototypes[itemname].stack_size)
 
                 for pstopnum, pamount in pairs(pstops) do
                     local newweight = calc_provider_weight(stopnum, pstopnum, itemname, amount, pamount, wagon_slots)
@@ -311,7 +317,7 @@ function tasks.service_route_requests(task)
                 if beststopnum ~= nil then
                     local actions = {}
                     actions[itemname] = math.min(amount, bestamount)
-                    dispatch_train(routenum, beststopnum, stopnum, actions)
+                    dispatch_train(train, beststopnum, stopnum, actions)
                 end
             end
         end
