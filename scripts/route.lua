@@ -229,11 +229,11 @@ function process_routes()
 end
 
 
-function calc_provider_weight(reqstopnum, provstopnum, itemname, wanted, have)
+function calc_provider_weight(reqstopnum, provstopnum, itemname, wanted, have, wagon_slots)
     -- XXX scale distance and make it negative
     -- threshold wanted/have, scale it, and make it negative
     -- scale idle time and make it positive
-    local weight = 0
+    local weights = {}
     local reqstop = global.stops[reqstopnum].stop
     local provstop = global.stops[provstopnum].stop
     if not reqstop.valid or not provstop.valid then
@@ -245,17 +245,29 @@ function calc_provider_weight(reqstopnum, provstopnum, itemname, wanted, have)
 
     -- Taxi cab distance between stops
     local distance = math.abs(reqpos.x - provpos.x) + math.abs(reqpos.y - provpos.y)
-    weight = weight - distance / 1000
+    weights.distance = -distance / 1000
 
     -- Insufficient amount in provider
     if wanted > have then
-        weight = weight - wanted / have - 1
+        weights.shortage = -wanted / have
+        weights.shortage_threshold = -1
+    end
+
+    -- XXX FIXME penalize for loads smaller than the train's capacity
+    local stacksize = game.item_prototypes[itemname].stack_size
+    --get_train_inventories(train)
+    local maximum = stacksize * wagon_slots
+    local actual = math.min(wanted, have)
+    if actual < maximum then
+        weights.capacity = -(maximum - actual) / maximum
+        weights.capacity_threshold = -1
     end
 
     -- Time since last serviced
-    weight = weight + (game.tick - global.stops[provstopnum].last_activity) / 1000
+    weights.waiting = (game.tick - global.stops[provstopnum].last_activity) / 10000
+    log(fstr(weights))
 
-    return weight
+    return sum(weights) * 100
 end
 
 
@@ -285,9 +297,10 @@ function tasks.service_route_requests(task)
                 local bestweight = -100  -- Doubles as a threshold for having no good providers
                 local beststopnum = nil
                 local bestamount = nil
+                local wagon_slots = 40  -- XXX FIXME huge bodge
 
                 for pstopnum, pamount in pairs(pstops) do
-                    local newweight = calc_provider_weight(stopnum, pstopnum, itemname, amount, pamount)
+                    local newweight = calc_provider_weight(stopnum, pstopnum, itemname, amount, pamount, wagon_slots)
                     if newweight >= bestweight then
                         bestweight = newweight
                         beststopnum = pstopnum

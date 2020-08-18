@@ -10,6 +10,8 @@
 -- Better balancing for wildly unbalanced chests
 -- Generate backer_name for new routes in a way that doesn't create a temporary object (and smoke) at 0,0
 -- update_train_list_train's updating of train status/issue should be done in a separate pass, independent of the player
+-- calc_provider_weight should penalize for partial loads but give a bonus as the amount left gets lower
+-- service_route_requests needs to grab a train first, then pass the train (or its capacity) in to calc_provider weight
 
 
 -- Attempt to load the profiler, ignore any errors if it doesn't exist

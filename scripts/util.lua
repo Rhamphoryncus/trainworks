@@ -46,3 +46,12 @@ function compare_dictionaries(a, b)
 
     return true
 end
+
+
+function sum(t)
+    local count = 0
+    for k, v in pairs(t) do
+        count = count + v
+    end
+    return count
+end

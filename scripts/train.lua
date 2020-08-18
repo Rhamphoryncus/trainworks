@@ -552,7 +552,7 @@ script.on_event({defines.events.on_entity_renamed},
                 global.depot_idletrain[e.entity.unit_number] = nil
             end
         elseif e.entity.prototype.name == "trainworks_stop" then
-            game.print("Stop renamed")
+            --game.print("Stop renamed")
         end
     end
 )
