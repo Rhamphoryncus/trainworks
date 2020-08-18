@@ -318,13 +318,19 @@ end
 function populate_modify(playernum, routenum)
     local frame = mod_gui.get_frame_flow(game.players[playernum]).trainworks_modify
     local flow = frame.add{type="flow", name="trainworks_modifyflow", direction="vertical"}
-    local top = flow.add{type="flow", direction="horizontal"}
-    top.add{type="textfield", name="trainworks_modifyname", text=global.routes[routenum].name}
-    local button = top.add{type="button", name="trainworks_deleteroute", caption={"gui.deleteroute"}, tooltip={"gui.deleteroute_tooltip"}}
+
+    local first = flow.add{type="flow", direction="horizontal"}
+    first.add{type="textfield", name="trainworks_modifyname", text=global.routes[routenum].name}
+    local button = first.add{type="button", name="trainworks_deleteroute", caption={"gui.deleteroute"}, tooltip={"gui.deleteroute_tooltip"}}
     if #global.routes[routenum] > 0 or routenum == 1 then
         button.enabled = false
     end
-    flow.add{type="textfield", name="trainworks_modifyfilter", tooltip={"gui.modifyfilter"}}
+
+    local second = flow.add{type="flow", direction="horizontal"}
+    second.add{type="textfield", name="trainworks_modifyfilter", tooltip={"gui.modifyfilter"}}
+    second.add{type="label", caption={"gui.modifyweight_label"}}
+    local weight = tostring(global.routes[routenum].weight)
+    second.add{type="textfield", name="trainworks_modifyweight", tooltip={"gui.modifyweight_tooltip"}, style="short_number_textfield", text=weight}
     global.gui_routemodify[playernum] = flow
     global.gui_deleteroute[playernum] = button
 
@@ -419,7 +425,7 @@ function new_route()
 
     local routenum = global.route_counter
     global.route_counter = global.route_counter + 1
-    global.routes[routenum] = {name=routename, trains={}, stops={}, provided={}, requested={}}
+    global.routes[routenum] = {name=routename, trains={}, stops={}, provided={}, requested={}, weight=0}
     global.route_map[routename] = routenum
 
     for playernum, player in pairs(game.players) do
@@ -525,6 +531,13 @@ script.on_event({defines.events.on_gui_confirmed},
     function (e)
         if e.element.name == "trainworks_modifyname" then
             rename_route(global.gui_selected_route[e.player_index], e.element.text)
+        elseif e.element.name == "trainworks_modifyweight" then
+            local num = tonumber(e.element.text)
+            if num ~= nil then
+                global.routes[global.gui_selected_route[e.player_index]].weight = num
+            else
+                game.players[e.player_index].print("Weight is not a valid number")
+            end
         end
     end
 )

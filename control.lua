@@ -10,8 +10,11 @@
 -- Better balancing for wildly unbalanced chests
 -- Generate backer_name for new routes in a way that doesn't create a temporary object (and smoke) at 0,0
 -- update_train_list_train's updating of train status/issue should be done in a separate pass, independent of the player
--- calc_provider_weight should penalize for partial loads but give a bonus as the amount left gets lower
--- service_route_requests needs to grab a train first, then pass the train (or its capacity) in to calc_provider weight
+-- calc_provider_weight should give a bonus as the amount left in the requester gets lower
+-- Chests are too small.  They should be at least several wagons in size.  A scaled up iron chest would be 32*12=384 slots
+-- Routes need a weight modifier box.  Universal should default to a decently large penalty
+-- Stops need a virtual signal as a weight modifier.  Common practice should be giving service routes a bonus, to counter universal's penalty.
+-- Fluid wagon support
 
 
 -- Attempt to load the profiler, ignore any errors if it doesn't exist
@@ -53,16 +56,17 @@ script.on_init(function()
     global.trains_dirty = false  -- Resort/refresh of GUI required due to new train or route reassignment
     global.depot_idletrain = {}  -- stopnum -> train  -- Train idling at each stop
 
-    global.routes = {}  -- routenum -> {name, trains, stops, provided, requested}
+    global.routes = {}  -- routenum -> {name, trains, stops, provided, requested, weight, dirty}
         -- name is string
         -- trains is trainid -> train
         -- stops is stopnum -> true
         -- provided is itemname -> stopnum -> amount
         -- requested is itemname -> stopnum -> amount
+        -- weight is integer  -- General modifier to all weights in this route
         -- dirty is true/nil  -- Indicates a route that had stops removed and the reqprov needs resetting
     global.route_counter = 2  -- Index for new routes.  Perpetually increasing
     global.route_map = {}  -- routename -> routenum  -- reverse mapping of depot/route name to routenum
-    global.routes[1] = {name="Universal", trains={}, stops={}, provided={}, requested={}}
+    global.routes[1] = {name="Universal", trains={}, stops={}, provided={}, requested={}, weight=-50}
     global.route_map["Universal"] = 1
 
     global.gui_selected_route = {}  -- playernum -> routenum
