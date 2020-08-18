@@ -229,7 +229,7 @@ function process_routes()
 end
 
 
-function calc_provider_weight(reqstopnum, provstopnum, itemname, wanted, have, wagon_slots)
+function calc_provider_weight(routenum, reqstopnum, provstopnum, itemname, wanted, have, wagon_slots)
     -- XXX scale distance and make it negative
     -- threshold wanted/have, scale it, and make it negative
     -- scale idle time and make it positive
@@ -268,8 +268,10 @@ function calc_provider_weight(reqstopnum, provstopnum, itemname, wanted, have, w
 
     -- Time since last serviced
     weights.waiting = (game.tick - global.stops[provstopnum].last_activity) / 10000
-    log(fstr(weights))
 
+    weights.route = global.routes[routenum].weight / 100  -- XXX FIXME bodge for scaling factors
+
+    log(fstr(weights))  -- XXX FIXME temporary bodge
     return sum(weights) * 100
 end
 
@@ -306,7 +308,7 @@ function tasks.service_route_requests(task)
                 amount = math.min(amount, wagon_slots * game.item_prototypes[itemname].stack_size)
 
                 for pstopnum, pamount in pairs(pstops) do
-                    local newweight = calc_provider_weight(stopnum, pstopnum, itemname, amount, pamount, wagon_slots)
+                    local newweight = calc_provider_weight(routenum, stopnum, pstopnum, itemname, amount, pamount, wagon_slots)
                     if newweight >= bestweight then
                         bestweight = newweight
                         beststopnum = pstopnum
