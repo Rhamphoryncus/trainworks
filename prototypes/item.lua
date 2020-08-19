@@ -42,7 +42,7 @@ data:extend{stop, stop_item, stop_recipe}
 
 local chest = table.deepcopy(data.raw.container["iron-chest"])
 chest.name = "trainworks_chest_horizontal"
-chest.inventory_size = 50
+chest.inventory_size = 400
 chest.collision_box = {{-2.9, -0.9}, {2.9, 0.9}}
 chest.selection_box = {{-2.9, -0.9}, {2.9, 0.9}}
 chest.picture.layers[1].scale = 2
@@ -69,7 +69,7 @@ data:extend{chest, chest_item, chest_recipe}
 
 local chest = table.deepcopy(data.raw.container["iron-chest"])
 chest.name = "trainworks_chest_vertical"
-chest.inventory_size = 50
+chest.inventory_size = 400
 chest.collision_box = {{-0.9, -2.9}, {0.9, 2.9}}
 chest.selection_box = {{-0.9, -2.9}, {0.9, 2.9}}
 chest.picture.layers[1].scale = 2
