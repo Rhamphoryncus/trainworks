@@ -229,10 +229,7 @@ function process_routes()
 end
 
 
-function calc_provider_weight(routenum, reqstopnum, provstopnum, itemname, wanted, have, wagon_slots)
-    -- XXX scale distance and make it negative
-    -- threshold wanted/have, scale it, and make it negative
-    -- scale idle time and make it positive
+function calc_provider_weight(routenum, reqstopnum, provstopnum, itemname, reqwanted, provhave, wagon_slots)
     local weights = {}
     local reqstop = global.stops[reqstopnum].stop
     local provstop = global.stops[provstopnum].stop
@@ -248,19 +245,21 @@ function calc_provider_weight(routenum, reqstopnum, provstopnum, itemname, wante
     weights.distance = -distance / 1000
 
     -- Insufficient amount in provider
-    if wanted > have then
-        weights.shortage = -wanted / have
+    if reqwanted > provhave then
+        weights.shortage = -reqwanted / provhave
         weights.shortage_threshold = -1
     end
 
     -- Requester is getting close to empty
-    -- XXX FIXME
-    -- 
+    weights.empty = reqwanted / global.stops[reqstopnum].oldvalues[itemname].want
+    if weights.empty >= 0.5 then
+        weights.empty_threshold = 1
+    end
 
     -- Insufficient to fill the train's wagons
     local stacksize = game.item_prototypes[itemname].stack_size
     local maximum = stacksize * wagon_slots
-    local actual = math.min(wanted, have)
+    local actual = math.min(reqwanted, provhave)
     if actual < maximum then
         weights.capacity = -(maximum - actual) / maximum
         weights.capacity_threshold = -1
@@ -271,7 +270,7 @@ function calc_provider_weight(routenum, reqstopnum, provstopnum, itemname, wante
 
     weights.route = global.routes[routenum].weight / 100  -- XXX FIXME bodge for scaling factors
 
-    log(fstr(weights))  -- XXX FIXME temporary bodge
+    log(fstr(weights) .. " -> " .. sum(weights))  -- XXX FIXME temporary bodge
     return sum(weights) * 100
 end
 
@@ -295,30 +294,30 @@ function tasks.service_route_requests(task)
     local routenum = task.routenum
 
     for itemname, stops in pairs(global.routes[routenum].requested) do
-        for stopnum, amount in pairs(stops) do
+        for stopnum, reqwanted in pairs(stops) do
             local train = find_idling_train(routenum)
             local pstops = global.routes[routenum].provided[itemname]
             if train ~= nil and pstops ~= nil then
                 local bestweight = -100  -- Doubles as a threshold for having no good providers
                 local beststopnum = nil
-                local bestamount = nil
+                local besthave = nil
                 local wagon_slots = count_inventory_slots(get_train_inventories(train))
 
-                -- Cap wanted amount by train size
-                amount = math.min(amount, wagon_slots * game.item_prototypes[itemname].stack_size)
+                -- Cap wanted reqwanted by train size
+                reqwanted = math.min(reqwanted, wagon_slots * game.item_prototypes[itemname].stack_size)
 
-                for pstopnum, pamount in pairs(pstops) do
-                    local newweight = calc_provider_weight(routenum, stopnum, pstopnum, itemname, amount, pamount, wagon_slots)
+                for pstopnum, provhave in pairs(pstops) do
+                    local newweight = calc_provider_weight(routenum, stopnum, pstopnum, itemname, reqwanted, provhave, wagon_slots)
                     if newweight >= bestweight then
                         bestweight = newweight
                         beststopnum = pstopnum
-                        bestamount = pamount
+                        besthave = provhave
                     end
                 end
 
                 if beststopnum ~= nil then
                     local actions = {}
-                    actions[itemname] = math.min(amount, bestamount)
+                    actions[itemname] = math.min(reqwanted, besthave)
                     dispatch_train(train, beststopnum, stopnum, actions)
                 end
             end
