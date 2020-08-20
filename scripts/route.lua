@@ -266,7 +266,13 @@ function calc_provider_weight(routenum, reqstopnum, provstopnum, itemname, reqwa
     end
 
     -- Time since last serviced
-    weights.waiting = (game.tick - global.stops[provstopnum].last_activity) / 10000
+    local last = global.stops[provstopnum].last_activity[itemname]
+    if last == nil then
+        -- There's new work to do so start tracking how long it has waited
+        global.stops[provstopnum].last_activity[itemname] = game.tick
+        last = game.tick
+    end
+    weights.waiting = (game.tick - last) / 10000
 
     weights.route = global.routes[routenum].weight / 100  -- XXX FIXME bodge for scaling factors
 

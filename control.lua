@@ -15,6 +15,7 @@
 -- Routes need a weight modifier box.  Universal should default to a decently large penalty
 -- Stops need a virtual signal as a weight modifier.  Common practice should be giving service routes a bonus, to counter universal's penalty.
 -- Fluid wagon support
+-- Bug: clearing last_activity requires reqprov be updated to the current job but that happens lazily.  It's possible on a large map for a job to happen quick enough that reqprov never saw it and thus last_activity is never cleared.
 
 
 -- Attempt to load the profiler, ignore any errors if it doesn't exist
@@ -86,6 +87,18 @@ script.on_init(function()
     global.cleanup_routes = {}  -- routenum -> true  -- Routes that the user asked to delete
 
     gui_initialize_players()
+end)
+
+
+script.on_configuration_changed(function()
+    -- Compare mod versions.  If something changed execute a migration
+    game.print("on_configuration_changed: " .. game.active_mods["Trainworks"])
+
+    for i, stop in pairs(global.stops) do
+        if type(stop.last_activity) == "number" then
+            stop.last_activity = {}
+        end
+    end
 end)
 
 

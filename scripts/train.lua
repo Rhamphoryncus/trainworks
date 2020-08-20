@@ -316,14 +316,36 @@ function action_train(train)
 
     if train.schedule.current == 1 then
         -- Load
-        transfer_inventories(get_chest_inventories(action.src.unit_number), get_train_inventories(train), action.actions)
-        global.stops[action.src.unit_number].last_activity = game.tick
+        local stopnum = action.src.unit_number
+        transfer_inventories(get_chest_inventories(stopnum), get_train_inventories(train), action.actions)
+
+        local last_activity = global.stops[stopnum].last_activity
+        local prov = global.routes[global.trains[train.id].routenum].provided
+        for itemname, amount in pairs(action.actions) do
+            -- Update last_activity or reset to nil if there's no more work to do
+            if prov[itemname][stopnum] == nil then
+                last_activity[itemname] = nil
+            else
+                last_activity[itemname] = game.tick
+            end
+        end
 
         global.stops[action.src.unit_number].actions[train.id] = nil  -- Delete the pickup action
     elseif train.schedule.current == 2 then
         -- Unload
-        transfer_inventories(get_train_inventories(train), get_chest_inventories(action.dest.unit_number), action.actions)
-        global.stops[action.dest.unit_number].last_activity = game.tick
+        local stopnum = action.dest.unit_number
+        transfer_inventories(get_train_inventories(train), get_chest_inventories(stopnum), action.actions)
+
+        local last_activity = global.stops[stopnum].last_activity
+        local req = global.routes[global.trains[train.id].routenum].requested
+        for itemname, amount in pairs(action.actions) do
+            -- Update last_activity or reset to nil if there's no more work to do
+            if req[itemname][stopnum] == nil then
+                last_activity[itemname] = nil
+            else
+                last_activity[itemname] = game.tick
+            end
+        end
 
         global.stops[action.dest.unit_number].actions[train.id] = nil  -- Delete the dropoff action
     end
@@ -431,8 +453,7 @@ function register_stop(stop)
         control.send_to_train = false
     end
 
-    -- XXX FIXME last_activity should be per-typename and provided vs requested
-    global.stops[stop.unit_number] = {stop=stop, chests={}, last_activity=game.tick, actions={}}
+    global.stops[stop.unit_number] = {stop=stop, chests={}, last_activity={}, actions={}}
     update_stop_chests(stop)
 
     -- The universal route gets all stops
