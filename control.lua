@@ -1,8 +1,6 @@
 -- Todo:
 -- Handle destruction of entities.  Probably just .valid checks and add them to a global "delete me" table to be processed later?  Trains, stops, and routes are done but depots are still needed.
 -- Add profiling hooks
--- Rebalance weights
--- Add provider/requester priorities to routes
 -- Add provider/requester priorities to stops
 -- Handle migration/reset parts of the mod on version changes
 -- Make stopchest's last_activity be per-typename
@@ -10,9 +8,6 @@
 -- Better balancing for wildly unbalanced chests
 -- Generate backer_name for new routes in a way that doesn't create a temporary object (and smoke) at 0,0
 -- update_train_list_train's updating of train status/issue should be done in a separate pass, independent of the player
--- calc_provider_weight should give a bonus as the amount left in the requester gets lower
--- Chests are too small.  They should be at least several wagons in size.  A scaled up iron chest would be 32*12=384 slots
--- Routes need a weight modifier box.  Universal should default to a decently large penalty
 -- Stops need a virtual signal as a weight modifier.  Common practice should be giving service routes a bonus, to counter universal's penalty.
 -- Fluid wagon support
 -- Bug: clearing last_activity requires reqprov be updated to the current job but that happens lazily.  It's possible on a large map for a job to happen quick enough that reqprov never saw it and thus last_activity is never cleared.
@@ -31,7 +26,7 @@ script.on_init(function()
     global.stops = {}  -- stopnum -> {stop, chests, last_activity, actions, oldvalues, newvalues}
         -- stop is stop  -- Underlying stop handle
         -- chests is {chest, ...}  -- Chest handles
-        -- last_activity is tick  -- Game tick that something was last picked up/dropped off
+        -- last_activity is itemname -> tick  -- Game tick that something was last picked up/dropped off
         -- actions is trainid -> {actions, pickup}
             -- actions is itemname -> amount  -- Transfers intended at this stop
             -- pickup is boolean  -- If the transfers are a pickup or drop off

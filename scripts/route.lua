@@ -229,58 +229,6 @@ function process_routes()
 end
 
 
-function calc_provider_weight(routenum, reqstopnum, provstopnum, itemname, reqwanted, provhave, wagon_slots)
-    local weights = {}
-    local reqstop = global.stops[reqstopnum].stop
-    local provstop = global.stops[provstopnum].stop
-    if not reqstop.valid or not provstop.valid then
-        -- Stop has been removed
-        return -math.huge
-    end
-    local reqpos = reqstop.position
-    local provpos = provstop.position
-
-    -- Taxi cab distance between stops
-    local distance = math.abs(reqpos.x - provpos.x) + math.abs(reqpos.y - provpos.y)
-    weights.distance = -distance / 1000
-
-    -- Insufficient amount in provider
-    if reqwanted > provhave then
-        weights.shortage = -reqwanted / provhave
-        weights.shortage_threshold = -1
-    end
-
-    -- Requester is getting close to empty
-    weights.empty = reqwanted / global.stops[reqstopnum].oldvalues[itemname].want
-    if weights.empty >= 0.5 then
-        weights.empty_threshold = 1
-    end
-
-    -- Insufficient to fill the train's wagons
-    local stacksize = game.item_prototypes[itemname].stack_size
-    local maximum = stacksize * wagon_slots
-    local actual = math.min(reqwanted, provhave)
-    if actual < maximum then
-        weights.capacity = -(maximum - actual) / maximum
-        weights.capacity_threshold = -1
-    end
-
-    -- Time since last serviced
-    local last = global.stops[provstopnum].last_activity[itemname]
-    if last == nil then
-        -- There's new work to do so start tracking how long it has waited
-        global.stops[provstopnum].last_activity[itemname] = game.tick
-        last = game.tick
-    end
-    weights.waiting = (game.tick - last) / 10000
-
-    weights.route = global.routes[routenum].weight / 100  -- XXX FIXME bodge for scaling factors
-
-    log(fstr(weights) .. " -> " .. sum(weights))  -- XXX FIXME temporary bodge
-    return sum(weights) * 100
-end
-
-
 function tasks.copy_service_routes(task)
     -- Updating values and reqprov has finished
     for stopnum, stop in pairs(global.stops) do
@@ -295,9 +243,89 @@ function tasks.copy_service_routes(task)
 end
 
 
+function find_best_providers(stops, itemname, wanted)
+    local first_stopnum = nil
+    local first_have = 0
+    local first_age = -math.huge
+    local second_stopnum = nil
+    local second_have = 0
+    local second_age = -math.huge
+
+    for pstopnum, provhave in pairs(stops) do
+        local age = time_since_last_service(pstopnum, itemname)
+        provhave = math.min(provhave, wanted)
+
+        -- Find the first provider option, hopefully a full request
+        if (provhave > first_have) or (provhave == first_have and age > first_age) then
+            first_stopnum = pstopnum
+            first_have = provhave
+            first_age = age
+        end
+
+        -- Find the second provider option, one that hasn't been serviced in a while
+        if age > second_age then
+            second_stopnum = pstopnum
+            second_have = provhave
+            second_age = age
+        end
+    end
+
+    return {stopnum=first_stopnum, have=first_have, age=first_age}, {stopnum=second_stopnum, have=second_have, age=second_age}
+end
+
+function time_since_last_service(stopnum, itemname)
+    -- Time since last serviced in minutes
+    local last = global.stops[stopnum].last_activity[itemname]
+    if last == nil then
+        -- There's new work to do so start tracking how long it has waited
+        last = game.tick
+        global.stops[stopnum].last_activity[itemname] = last
+    end
+
+    return (game.tick - last) / 3600
+end
+
+function trigger_shortcut(requester, first, itemname, wagon_slots, weight)
+    -- Full wagonload, send immediately
+    local full = wagon_slots * game.item_prototypes[itemname].stack_size
+
+    if requester.want == full and first.have == full and weight >= 0 then
+        return true
+    else
+        return false
+    end
+end
+
+function trigger_providerage(requester, first, itemname, wagon_slots, weight)
+    -- Requester is getting empty, send a train quickly.  Alternatively it's almost full and a train just goes eventually.
+    -- Each potential fullness corresponds to a minimum age
+    -- 0% -> 0 minutes
+    -- 25% -> 0 minutes
+    -- 50% -> 5 minutes
+    -- 75% -> 10 minutes
+    -- 100% -> 15 minutes
+    local fullness = 1 - (requester.want / global.stops[requester.stopnum].oldvalues[itemname].want)
+    local minimum_age = math.max(fullness * 20 - 5, 0)
+    if first.age + weight > minimum_age then
+        return true
+    else
+        return false
+    end
+end
+
+function trigger_requesterage(requester, first, itemname, wagon_slots, weight)
+    -- Requester waited a long time, just clean it up
+    if requester.age >= 30 then
+        return true
+    else
+        return false
+    end
+end
+
 function tasks.service_route_requests(task)
     -- Loop through requested items and see if something is in provided
     local routenum = task.routenum
+    local weight = global.routes[routenum].weight
 
     for itemname, stops in pairs(global.routes[routenum].requested) do
         for stopnum, reqwanted in pairs(stops) do
@@ -309,22 +337,30 @@ function tasks.service_route_requests(task)
                 local besthave = nil
                 local wagon_slots = count_inventory_slots(get_train_inventories(train))
 
-                -- Cap wanted reqwanted by train size
+                -- Cap reqwanted by train size
                 reqwanted = math.min(reqwanted, wagon_slots * game.item_prototypes[itemname].stack_size)
 
-                for pstopnum, provhave in pairs(pstops) do
-                    local newweight = calc_provider_weight(routenum, stopnum, pstopnum, itemname, reqwanted, provhave, wagon_slots)
-                    if newweight >= bestweight then
-                        bestweight = newweight
-                        beststopnum = pstopnum
-                        besthave = provhave
-                    end
+                local first, second = find_best_providers(pstops, itemname, reqwanted)
+                local requester = {stopnum=stopnum, want=reqwanted, age=time_since_last_service(stopnum, itemname)}
+                local chosen = nil
+                if trigger_shortcut(requester, first, itemname, wagon_slots, weight) then
+                    --game.print("Shortcut")
+                    chosen = first
+                elseif trigger_providerage(requester, first, itemname, wagon_slots, weight) then
+                    --game.print("Providerage Full")
+                    chosen = first
+                elseif trigger_providerage(requester, second, itemname, wagon_slots, weight) then
+                    --game.print("Providerage Old")
+                    chosen = second
+                elseif trigger_requesterage(requester, first, itemname, wagon_slots, weight) then
+                    --game.print("Requesterage")
+                    chosen = first
                 end
 
-                if beststopnum ~= nil then
+                if chosen ~= nil then
                     local actions = {}
-                    actions[itemname] = math.min(reqwanted, besthave)
-                    dispatch_train(train, beststopnum, stopnum, actions)
+                    actions[itemname] = math.min(reqwanted, chosen.have)
+                    dispatch_train(train, chosen.stopnum, requester.stopnum, actions)
                 end
             end
         end
