@@ -352,18 +352,14 @@ function action_train(train)
 end
 
 
-valid_container_types = {
-    trainworks_chest_horizontal = true,
-    trainworks_chest_vertical = true
-}
-
-
-function find_entity_chain(surface, x, y, offset_x, offset_y, direction, count, type, prototypes)
+MAX_STATION_LENGTH = 24
+function find_entity_chain(surface, pos, offset, direction, count, type, prototypes)
     local entlist = {}
+    local x, y = pos.x, pos.y
 
     for i=1,count do
-        local objs = surface.find_entities_filtered{type=type, position={x+offset_x, y+offset_y}}
-        for _, o in objs do
+        local objs = surface.find_entities_filtered{type=type, position={x+offset.x, y+offset.y}}
+        for _, o in pairs(objs) do
             if prototypes[o.name] then
                 table.insert(entlist, o)
             end
@@ -380,43 +376,19 @@ function find_entity_chain(surface, x, y, offset_x, offset_y, direction, count, 
         end
     end
 
-    game.print(fstr(entlist))
+    --game.print(fstr(entlist))
     return entlist
 end
 
 
-function find_chests(surface, x, y, direction)
-    -- Note: skips the first location
-    local chestlist = {}
-    local last_x, last_y = x, y
+valid_container_types = {
+    trainworks_chest_horizontal = true,
+    trainworks_chest_vertical = true
+}
 
-    while true do
-        if direction == defines.direction.north then
-            y = y - 7
-        elseif direction == defines.direction.south then
-            y = y + 7
-        elseif direction == defines.direction.east then
-            x = x + 7
-        elseif direction == defines.direction.west then
-            x = x - 7
-        end
-
-        --game.print("Searching for chest at " .. fstr(x) .. "," .. fstr(y))
-        local chests = surface.find_entities_filtered{type="container", position={x, y}}
-        local chest = chests[1] -- XXX ugly
-        -- XXX FIXME check against valid_container_types
-
-        if chest == nil or not valid_container_types[chest.name] then
-            break
-        end
-
-        table.insert(chestlist, chest)
-        last_x, last_y = x, y
-    end
-
-    return chestlist, last_x, last_y
-end
-
+valid_stop_types = {
+    trainworks_stop = true
+}
 
 flip_direction = {}
 flip_direction[defines.direction.north] = defines.direction.south
@@ -428,41 +400,25 @@ flip_direction[defines.direction.southwest] = defines.direction.northeast
 flip_direction[defines.direction.west] = defines.direction.east
 flip_direction[defines.direction.northwest] = defines.direction.southeast
 
+stop_offset_same = {}
+stop_offset_same[defines.direction.north] = {x=0, y=-3}
+stop_offset_same[defines.direction.east] = {x=3, y=0}
+stop_offset_same[defines.direction.south] = {x=0, y=3}
+stop_offset_same[defines.direction.west] = {x=-3, y=0}
+
+stop_offset_opposite = {}
+stop_offset_opposite[defines.direction.north] = {x=4, y=-3}
+stop_offset_opposite[defines.direction.east] = {x=3, y=4}
+stop_offset_opposite[defines.direction.south] = {x=-4, y=3}
+stop_offset_opposite[defines.direction.west] = {x=-3, y=-4}
+
 
 function update_stop_chests(stop)
     -- Chests on the same side as the stop
-    local x, y = stop.position.x, stop.position.y
-    if stop.direction == defines.direction.north then
-        -- North facing trainstop means the first wagon is a bit south of it
-        y = y + 3
-    elseif stop.direction == defines.direction.south then
-        y = y - 3
-    elseif stop.direction == defines.direction.east then
-        x = x - 3
-    elseif stop.direction == defines.direction.west then
-        x = x + 3
-    end
-
-    local chestlist = find_chests(stop.surface, x, y, flip_direction[stop.direction])
+    local chestlist = find_entity_chain(stop.surface, stop.position, stop_offset_same[flip_direction[stop.direction]], flip_direction[stop.direction], MAX_STATION_LENGTH, "container", valid_container_types)
 
     -- Chests on the opposite side from the stop
-    local x, y = stop.position.x, stop.position.y
-    if stop.direction == defines.direction.north then
-        -- North facing trainstop means the first wagon is a bit south of it
-        x = x - 4
-        y = y + 3
-    elseif stop.direction == defines.direction.south then
-        x = x + 4
-        y = y - 3
-    elseif stop.direction == defines.direction.east then
-        x = x - 3
-        y = y - 4
-    elseif stop.direction == defines.direction.west then
-        x = x + 3
-        y = y + 4
-    end
-
-    local chestlist2 = find_chests(stop.surface, x, y, flip_direction[stop.direction])
+    local chestlist2 = find_entity_chain(stop.surface, stop.position, stop_offset_opposite[flip_direction[stop.direction]], flip_direction[stop.direction], MAX_STATION_LENGTH, "container", valid_container_types)
 
     -- Merge the two lists
     for x, chest in pairs(chestlist2) do
@@ -496,54 +452,32 @@ end
 
 
 function search_for_stop_same(surface, pos, direction)
-    local chestlist, x, y = find_chests(surface, pos.x, pos.y, direction)
-    --game.print("search_for_stop_same (" .. fstr(direction) .. "): x:" .. fstr(x) .. " y:" .. fstr(y) .. "  " .. fstr(chestlist))
+    local stops = find_entity_chain(surface, pos, stop_offset_same[direction], direction, MAX_STATION_LENGTH, "train-stop", valid_stop_types)
+    --game.print("search_for_stop_same (" .. fstr(direction) .. "): " .. fstr(pos) .. "  " .. fstr(stops))
 
-    if direction == defines.direction.north then
-        y = y - 10
-    elseif direction == defines.direction.south then
-        y = y + 10
-    elseif direction == defines.direction.east then
-        x = x + 10
-    elseif direction == defines.direction.west then
-        x = x - 10
+    -- Filter for the correct orientation
+    for i, stop in pairs(stops) do
+        if stop.direction == direction then
+            return stop
+        end
     end
 
-    local stops = surface.find_entities_filtered{type="train-stop", position={x, y}}
-    local stop = stops[1]  -- XXX ugly hack
-    if stop == nil or stop.prototype.name ~= "trainworks_stop" then
-        return nil
-    end
-
-    return stop
+    return nil
 end
 
 
 function search_for_stop_opposite(surface, pos, direction)
-    local chestlist, x, y = find_chests(surface, pos.x, pos.y, direction)
-    --game.print("search_for_stop_opposite (" .. fstr(direction) .. "): x:" .. fstr(x) .. " y:" .. fstr(y) .. "  " .. fstr(chestlist))
+    local stops = find_entity_chain(surface, pos, stop_offset_opposite[direction], direction, MAX_STATION_LENGTH, "train-stop", valid_stop_types)
+    --game.print("search_for_stop_opposite (" .. fstr(direction) .. "): " .. fstr(pos) .. "  " .. fstr(stops))
 
-    if direction == defines.direction.north then
-        x = x + 4
-        y = y - 10
-    elseif direction == defines.direction.south then
-        x = x - 4
-        y = y + 10
-    elseif direction == defines.direction.east then
-        x = x + 10
-        y = y + 4
-    elseif direction == defines.direction.west then
-        x = x - 10
-        y = y - 4
+    -- Filter for the correct orientation
+    for i, stop in pairs(stops) do
+        if stop.direction == direction then
+            return stop
+        end
     end
 
-    local stops = surface.find_entities_filtered{type="train-stop", position={x, y}}
-    local stop = stops[1]  -- XXX ugly hack
-    if stop == nil or stop.prototype.name ~= "trainworks_stop" then
-        return nil
-    end
-
-    return stop
+    return nil
 end
 
 
