@@ -11,6 +11,7 @@
 -- Stops need a virtual signal as a weight modifier.  Common practice should be giving service routes a bonus, to counter universal's penalty.
 -- Fluid wagon support
 -- Bug: clearing last_activity requires reqprov be updated to the current job but that happens lazily.  It's possible on a large map for a job to happen quick enough that reqprov never saw it and thus last_activity is never cleared.
+-- Bug: trainlist radiobuttons aren't being cleared immediately when you selected a different train
 
 
 -- Attempt to load the profiler, ignore any errors if it doesn't exist
@@ -23,10 +24,11 @@ require("scripts.gui")
 
 
 script.on_init(function()
-    global.stops = {}  -- stopnum -> {stop, chests, last_activity, actions, oldvalues, newvalues}
+    global.stops = {}  -- stopnum -> {stop, chests, last_activity, weight, actions, oldvalues, newvalues}
         -- stop is stop  -- Underlying stop handle
         -- chests is {chest, ...}  -- Chest handles
         -- last_activity is itemname -> tick  -- Game tick that something was last picked up/dropped off
+        -- weight is integer  -- General modifier to all weights on this stop
         -- actions is trainid -> {actions, pickup}
             -- actions is itemname -> amount  -- Transfers intended at this stop
             -- pickup is boolean  -- If the transfers are a pickup or drop off
@@ -62,7 +64,7 @@ script.on_init(function()
         -- dirty is true/nil  -- Indicates a route that had stops removed and the reqprov needs resetting
     global.route_counter = 2  -- Index for new routes.  Perpetually increasing
     global.route_map = {}  -- routename -> routenum  -- reverse mapping of depot/route name to routenum
-    global.routes[1] = {name="Universal", trains={}, stops={}, provided={}, requested={}, weight=-50}
+    global.routes[1] = {name="Universal", trains={}, stops={}, provided={}, requested={}, weight=-10}
     global.route_map["Universal"] = 1
 
     global.gui_selected_route = {}  -- playernum -> routenum

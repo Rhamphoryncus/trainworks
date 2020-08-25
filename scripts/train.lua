@@ -358,6 +358,33 @@ valid_container_types = {
 }
 
 
+function find_entity_chain(surface, x, y, offset_x, offset_y, direction, count, type, prototypes)
+    local entlist = {}
+
+    for i=1,count do
+        local objs = surface.find_entities_filtered{type=type, position={x+offset_x, y+offset_y}}
+        for _, o in objs do
+            if prototypes[o.name] then
+                table.insert(entlist, o)
+            end
+        end
+
+        if direction == defines.direction.north then
+            y = y - 7
+        elseif direction == defines.direction.south then
+            y = y + 7
+        elseif direction == defines.direction.east then
+            x = x + 7
+        elseif direction == defines.direction.west then
+            x = x - 7
+        end
+    end
+
+    game.print(fstr(entlist))
+    return entlist
+end
+
+
 function find_chests(surface, x, y, direction)
     -- Note: skips the first location
     local chestlist = {}
@@ -453,7 +480,7 @@ function register_stop(stop)
         control.send_to_train = false
     end
 
-    global.stops[stop.unit_number] = {stop=stop, chests={}, last_activity={}, actions={}}
+    global.stops[stop.unit_number] = {stop=stop, chests={}, last_activity={}, weight=0, actions={}}
     update_stop_chests(stop)
 
     -- The universal route gets all stops
@@ -522,6 +549,8 @@ end
 
 function register_chest(chest)
     local stops = nil
+
+    --local test = chest.surface.find_entities_filtered{type="container", position=chest.position, radius=168}
 
     -- XXX FIXME generalize this for future expansion, such as bot logistic chests
     if chest.name == "trainworks_chest_horizontal" then

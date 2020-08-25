@@ -2,6 +2,7 @@
 
 
 function merge_stop_signals(stopnum)
+    local priority = 0
     local output = {}
     local stop = global.stops[stopnum].stop
     if not stop.valid then
@@ -13,8 +14,13 @@ function merge_stop_signals(stopnum)
     for j, sig in pairs(signals) do
         if sig.signal.type == "item" and sig.signal.name then
             output[sig.signal.name] = sig
+        elseif sig.signal.type == "virtual" and sig.signal.name == "trainworks_priority" then
+            priority = sig.count
         end
     end
+
+    -- Cache the priority as a side effect
+    global.stops[stopnum].weight = priority
         
     return output
 end
@@ -270,7 +276,10 @@ function find_best_providers(stops, itemname, wanted)
         end
     end
 
-    return {stopnum=first_stopnum, have=first_have, age=first_age}, {stopnum=second_stopnum, have=second_have, age=second_age}
+    local first_weight = global.stops[first_stopnum].weight or 0
+    local second_weight = global.stops[second_stopnum].weight or 0
+
+    return {stopnum=first_stopnum, have=first_have, age=first_age, weight=first_weight}, {stopnum=second_stopnum, have=second_have, age=second_age, weight=second_weight}
 end
 
 function time_since_last_service(stopnum, itemname)
@@ -289,7 +298,7 @@ function trigger_shortcut(requester, first, itemname, wagon_slots, weight)
     -- Full wagonload, send immediately
     local full = wagon_slots * game.item_prototypes[itemname].stack_size
 
-    if requester.want == full and first.have == full and weight >= 0 then
+    if requester.want == full and first.have == full and (weight + requester.weight + first.weight) >= 0 then
         return true
     else
         return false
@@ -306,7 +315,7 @@ function trigger_providerage(requester, first, itemname, wagon_slots, weight)
     -- 100% -> 15 minutes
     local fullness = 1 - (requester.want / global.stops[requester.stopnum].oldvalues[itemname].want)
     local minimum_age = math.max(fullness * 20 - 5, 0)
-    if first.age + weight > minimum_age then
+    if first.age + weight + requester.weight + first.weight > minimum_age then
         return true
     else
         return false
@@ -315,7 +324,7 @@ end
 
 function trigger_requesterage(requester, first, itemname, wagon_slots, weight)
     -- Requester waited a long time, just clean it up
-    if requester.age >= 30 then
+    if requester.age + weight + requester.weight + first.weight >= 30 then
         return true
     else
         return false
@@ -325,34 +334,32 @@ end
 function tasks.service_route_requests(task)
     -- Loop through requested items and see if something is in provided
     local routenum = task.routenum
-    local weight = global.routes[routenum].weight
+    local routeweight = global.routes[routenum].weight
 
     for itemname, stops in pairs(global.routes[routenum].requested) do
         for stopnum, reqwanted in pairs(stops) do
+            local reqweight = global.stops[stopnum].weight or 0
             local train = find_idling_train(routenum)
             local pstops = global.routes[routenum].provided[itemname]
-            if train ~= nil and pstops ~= nil then
-                local bestweight = -100  -- Doubles as a threshold for having no good providers
-                local beststopnum = nil
-                local besthave = nil
+            if train ~= nil and pstops ~= nil and next(pstops) ~= nil then
                 local wagon_slots = count_inventory_slots(get_train_inventories(train))
 
                 -- Cap reqwanted by train size
                 reqwanted = math.min(reqwanted, wagon_slots * game.item_prototypes[itemname].stack_size)
 
                 local first, second = find_best_providers(pstops, itemname, reqwanted)
-                local requester = {stopnum=stopnum, want=reqwanted, age=time_since_last_service(stopnum, itemname)}
+                local requester = {stopnum=stopnum, want=reqwanted, age=time_since_last_service(stopnum, itemname), weight=reqweight}
                 local chosen = nil
-                if trigger_shortcut(requester, first, itemname, wagon_slots, weight) then
+                if trigger_shortcut(requester, first, itemname, wagon_slots, routeweight) then
                     --game.print("Shortcut")
                     chosen = first
-                elseif trigger_providerage(requester, first, itemname, wagon_slots, weight) then
+                elseif trigger_providerage(requester, first, itemname, wagon_slots, routeweight) then
                     --game.print("Providerage Full")
                     chosen = first
-                elseif trigger_providerage(requester, second, itemname, wagon_slots, weight) then
+                elseif trigger_providerage(requester, second, itemname, wagon_slots, routeweight) then
                     --game.print("Providerage Old")
                     chosen = second
-                elseif trigger_requesterage(requester, first, itemname, wagon_slots, weight) then
+                elseif trigger_requesterage(requester, first, itemname, wagon_slots, routeweight) then
                     --game.print("Requesterage")
                     chosen = first
                 end
