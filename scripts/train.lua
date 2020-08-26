@@ -353,17 +353,27 @@ end
 
 
 MAX_STATION_LENGTH = 24
-function find_entity_chain(surface, pos, offset, direction, count, type, prototypes)
+function find_entity_chain(surface, pos, offset, direction, length, type, prototypes)
     local entlist = {}
     local x, y = pos.x, pos.y
+    local intro = true
 
-    for i=1,count do
+    for i=1,length do
         local obj_pos = {x=x+offset.x, y=y+offset.y}
         local objs = surface.find_entities_filtered{type=type, position=obj_pos}
+        local hit = false
         for _, o in pairs(objs) do
             if o.position.x == obj_pos.x and o.position.y == obj_pos.y and prototypes[o.name] then
                 table.insert(entlist, o)
+                hit = true
+                intro = false
             end
+        end
+
+        if not intro and not hit then
+            -- A gap marks the end of the chain
+            --game.print("Hit gap (" .. type .. "):" .. fstr(entlist))
+            break
         end
 
         if direction == defines.direction.north then
@@ -377,7 +387,7 @@ function find_entity_chain(surface, pos, offset, direction, count, type, prototy
         end
     end
 
-    --game.print(fstr(entlist))
+    --game.print("find_entity_chain (" .. type .. "): " .. fstr(entlist))
     return entlist
 end
 
@@ -420,6 +430,8 @@ function update_stop_chests(stop)
 
     -- Chests on the opposite side from the stop
     local chestlist2 = find_entity_chain(stop.surface, stop.position, stop_offset_opposite[flip_direction[stop.direction]], flip_direction[stop.direction], MAX_STATION_LENGTH, "container", valid_container_types)
+
+    --game.print("update_stop_chests " .. fstr(stop) .. " -> " .. fstr(chestlist) .. "/" .. fstr(chestlist2))
 
     -- Merge the two lists
     for x, chest in pairs(chestlist2) do
