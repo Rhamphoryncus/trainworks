@@ -358,9 +358,10 @@ function find_entity_chain(surface, pos, offset, direction, count, type, prototy
     local x, y = pos.x, pos.y
 
     for i=1,count do
-        local objs = surface.find_entities_filtered{type=type, position={x+offset.x, y+offset.y}}
+        local obj_pos = {x=x+offset.x, y=y+offset.y}
+        local objs = surface.find_entities_filtered{type=type, position=obj_pos}
         for _, o in pairs(objs) do
-            if prototypes[o.name] then
+            if o.position.x == obj_pos.x and o.position.y == obj_pos.y and prototypes[o.name] then
                 table.insert(entlist, o)
             end
         end
@@ -483,8 +484,6 @@ end
 
 function register_chest(chest)
     local stops = nil
-
-    --local test = chest.surface.find_entities_filtered{type="container", position=chest.position, radius=168}
 
     -- XXX FIXME generalize this for future expansion, such as bot logistic chests
     if chest.name == "trainworks_chest_horizontal" then
