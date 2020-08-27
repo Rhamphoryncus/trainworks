@@ -19,6 +19,10 @@ local tech = {
         {
             type = "unlock-recipe",
             recipe = "trainworks_chest_vertical"
+        },
+        {
+            type = "unlock-recipe",
+            recipe = "trainworks_tank"
         }
     },
     prerequisites = {"automated-rail-transportation"},

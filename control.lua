@@ -96,6 +96,11 @@ script.on_configuration_changed(function()
             stop.last_activity = {}
         end
     end
+
+    -- Migrate the new recipe into the old research
+    for _, force in pairs(game.forces) do
+        force.recipes["trainworks_tank"].enabled = force.technologies["trainworks_tech"].researched
+    end
 end)
 
 

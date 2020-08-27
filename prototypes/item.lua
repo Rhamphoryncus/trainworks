@@ -92,3 +92,29 @@ chest_recipe.name = "trainworks_chest_vertical"
 chest_recipe.result = "trainworks_chest_vertical"
 
 data:extend{chest, chest_item, chest_recipe}
+
+
+local tank = table.deepcopy(data.raw["storage-tank"]["storage-tank"])
+tank.name = "trainworks_tank"
+tank.collision_box = {{-2.9, -0.9}, {2.9, 0.9}}
+tank.selection_box = {{-2.9, -0.9}, {2.9, 0.9}}
+tank.fluid_box = {pipe_connections = {
+    {position = {2.5, 1.5}},
+    {position = {2.5, -1.5}},
+    {position = {-2.5, 1.5}},
+    {position = {-2.5, -1.5}},
+    {position = {3.5, 0.5}},
+    {position = {3.5, -0.5}},
+    {position = {-3.5, 0.5}},
+    {position = {-3.5, -0.5}},
+}}
+
+local tank_item = table.deepcopy(data.raw.item["storage-tank"])
+tank_item.name = "trainworks_tank"
+tank_item.place_result = "trainworks_tank"
+
+local tank_recipe = table.deepcopy(data.raw.recipe["storage-tank"])
+tank_recipe.name = "trainworks_tank"
+tank_recipe.result = "trainworks_tank"
+
+data:extend{tank, tank_item, tank_recipe}
