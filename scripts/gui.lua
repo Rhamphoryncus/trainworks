@@ -527,6 +527,46 @@ function rename_route(routenum, text)
 end
 
 
+function create_chestfilter(playernum)
+    local player = game.players[playernum]
+    local fluidbox = player.opened.fluidbox
+    local filter = player.opened.fluidbox.get_filter(1)
+    local type = nil
+    if filter ~= nil then
+        type = filter.name
+    end
+    local frame = player.gui.left.add{type="frame", name="trainworks_chestfilter", caption={"gui.chestfilter_label"}}
+    frame.add{type="choose-elem-button", name="trainworks_chestfilter_selector", elem_type="fluid", fluid=type}
+end
+
+
+function destroy_chestfilter(playernum)
+    local player = game.players[playernum]
+    local chestfilter = player.gui.left.trainworks_chestfilter
+    if chestfilter then
+        chestfilter.destroy()
+    end
+end
+
+
+function update_chestfilter(playernum, elem)
+    local fluidbox = game.players[playernum].opened.fluidbox
+    local fluid = nil
+    if elem.elem_value ~= nil then
+        fluid = {name=elem.elem_value}
+    end
+
+    if fluidbox.set_filter(1, fluid) then
+        -- Success
+        --game.print("Successfully set filter")
+    else
+        -- Error, revert
+        game.print("Can't change filter")
+        elem.elem_value = fluidbox.get_locked_fluid(1)
+    end
+end
+
+
 script.on_event({defines.events.on_gui_confirmed},
     function (e)
         if e.element.name == "trainworks_modifyname" then
@@ -538,6 +578,35 @@ script.on_event({defines.events.on_gui_confirmed},
             else
                 game.players[e.player_index].print("Weight is not a valid number")
             end
+        end
+    end
+)
+
+
+script.on_event({defines.events.on_gui_opened},
+    function (e)
+        --game.print("gui opened " .. fstr(e.entity))
+
+        if e.entity ~= nil and e.entity.prototype.name == "trainworks_tank" then
+            create_chestfilter(e.player_index)
+        end
+    end
+)
+
+
+script.on_event({defines.events.on_gui_closed},
+    function (e)
+        --game.print("gui closed " .. fstr(e.entity))
+        destroy_chestfilter(e.player_index)
+    end
+)
+
+
+script.on_event({defines.events.on_gui_elem_changed},
+    function (e)
+        if e.element.name == "trainworks_chestfilter_selector" then
+            --game.print("gui element changed")
+            update_chestfilter(e.player_index, e.element)
         end
     end
 )
