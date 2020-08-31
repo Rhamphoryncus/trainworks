@@ -187,7 +187,11 @@ end
 
 function inv_count(inv, itemname)
     if pcall(function() return inv.owner.type == "storage-tank" end) then
-        game.print("Wot1")
+        if inv[1] ~= nil and inv[1].name == itemname then
+            return math.floor(inv[1].amount)
+        else
+            return 0
+        end
     elseif pcall(function() return inv.entity_owner.type == "container" end) then
         return inv.get_item_count(itemname)
     else
@@ -195,12 +199,31 @@ function inv_count(inv, itemname)
     end
 end
 
+function inv_space(inv, itemname)
+    if pcall(function() return inv.owner.type == "storage-tank" end) then
+        local proto = game.fluid_prototypes[itemname]
+        if proto then
+            return inv.get_capacity(1)
+        else
+            return 0
+        end
+    elseif pcall(function() return inv.entity_owner.type == "container" end) then
+        local proto = game.item_prototypes[itemname]
+        if proto then
+            return #inv * proto.stack_size
+        else
+            return 0
+        end
+    else
+        error("Unexpected type of inventory")
+    end
+end
+
 function inv_contents(inv)
     if pcall(function() return inv.owner.type == "storage-tank" end) then
-        game.print("Wot1")
         local contents = {}
         if inv[1] ~= nil then
-            contents[inv[1].name] = inv[1].amount
+            contents[inv[1].name] = math.floor(inv[1].amount)
         end
         return contents
     elseif pcall(function() return inv.entity_owner.type == "container" end) then
@@ -212,7 +235,17 @@ end
 
 function inv_add(inv, itemname, count)
     if pcall(function() return inv.owner.type == "storage-tank" end) then
-        game.print("Wot1")
+        local subbox = inv[1]
+        if subbox == nil then
+            subbox = {name=itemname, amount=0}
+        elseif subbox.name ~= itemname then
+            return 0
+        end
+
+        local count = math.min(inv.get_capacity(1) - subbox.amount, count)
+        subbox.amount = subbox.amount + count
+        inv[1] = subbox
+        return count
     elseif pcall(function() return inv.entity_owner.type == "container" end) then
         return inv.insert({name=itemname, count=count})
     else
@@ -222,7 +255,19 @@ end
 
 function inv_subtract(inv, itemname, count)
     if pcall(function() return inv.owner.type == "storage-tank" end) then
-        game.print("Wot1")
+        local subbox = inv[1]
+        if subbox.name ~= itemname then
+            return 0
+        end
+
+        local count = math.min(subbox.amount, count)
+        subbox.amount = subbox.amount - count
+        if subbox.amount > 0 then
+            inv[1] = subbox
+        else
+            inv[1] = nil
+        end
+        return count
     elseif pcall(function() return inv.entity_owner.type == "container" end) then
         return inv.remove({name=itemname, count=count})
     else
@@ -322,6 +367,9 @@ function get_train_inventories(train)
     for i, wagon in pairs(train.cargo_wagons) do
         table.insert(invs, wagon.get_inventory(defines.inventory.cargo_wagon))
     end
+    for i, wagon in pairs(train.fluid_wagons) do
+        table.insert(invs, wagon.fluidbox)
+    end
     return invs
 end
 
@@ -356,6 +404,16 @@ function count_inventory_slots(invs)
     end
 
     return count
+end
+
+function space_for_type(invs, itemname)
+    local space = 0
+
+    for i, inv in pairs(invs) do
+        space = space + inv_space(inv, itemname)
+    end
+
+    return space
 end
 
 
