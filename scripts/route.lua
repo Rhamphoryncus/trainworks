@@ -12,7 +12,7 @@ function merge_stop_signals(stopnum)
     local signals = stop.get_merged_signals() or {}
 
     for j, sig in pairs(signals) do
-        if sig.signal.type == "item" and sig.signal.name then
+        if (sig.signal.type == "item" or sig.signal.type == "fluid") and sig.signal.name then
             output[sig.signal.name] = sig
         elseif sig.signal.type == "virtual" and sig.signal.name == "trainworks_priority" then
             priority = sig.count
@@ -39,18 +39,12 @@ function calculate_value_for_stop(stopnum)
         value[itemname].want = value[itemname].want + sig.count
     end
 
-    for i, chest in pairs(chests) do
-        if chest.valid then
-            local inv = chest.get_inventory(defines.inventory.chest).get_contents()
-
-            -- Add inventory to value
-            for itemname, amount in pairs(inv) do
-                if value[itemname] == nil then
-                    value[itemname] = {have=0, want=0, pickup=0, dropoff=0}
-                end
-                value[itemname].have = value[itemname].have + amount
-            end
+    -- Add inventory to value
+    for itemname, amount in pairs(merge_inventories(get_chest_inventories(stopnum))) do
+        if value[itemname] == nil then
+            value[itemname] = {have=0, want=0, pickup=0, dropoff=0}
         end
+        value[itemname].have = value[itemname].have + amount
     end
 
     -- Add pending trains to value

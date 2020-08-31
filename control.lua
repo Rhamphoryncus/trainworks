@@ -12,6 +12,9 @@
 -- Fluid wagon support
 -- Bug: clearing last_activity requires reqprov be updated to the current job but that happens lazily.  It's possible on a large map for a job to happen quick enough that reqprov never saw it and thus last_activity is never cleared.
 -- Bug: trainlist radiobuttons aren't being cleared immediately when you selected a different train
+-- Expand find_idling_train to have a flag for fluid trains
+-- Figure out how to make transfer_inventories_balanced work with fluid trains.  Make adding/removing/counting go through generic functions?
+-- Make get_chest_inventories and get_train_inventories also mix in the fluid boxes
 
 
 -- Attempt to load the profiler, ignore any errors if it doesn't exist
@@ -121,6 +124,8 @@ function handle_built_event(ent)
     elseif ent.name == "trainworks_chest_horizontal" then
         register_chest(ent)
     elseif ent.name == "trainworks_chest_vertical" then
+        register_chest(ent)
+    elseif ent.name == "trainworks_tank" then
         register_chest(ent)
     end
 end

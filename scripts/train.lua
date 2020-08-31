@@ -185,12 +185,57 @@ function reset_train(trainid, train)
 end
 
 
+function inv_count(inv, itemname)
+    if pcall(function() return inv.owner.type == "storage-tank" end) then
+        game.print("Wot1")
+    elseif pcall(function() return inv.entity_owner.type == "container" end) then
+        return inv.get_item_count(itemname)
+    else
+        error("Unexpected type of inventory")
+    end
+end
+
+function inv_contents(inv)
+    if pcall(function() return inv.owner.type == "storage-tank" end) then
+        game.print("Wot1")
+        local contents = {}
+        if inv[1] ~= nil then
+            contents[inv[1].name] = inv[1].amount
+        end
+        return contents
+    elseif pcall(function() return inv.entity_owner.type == "container" end) then
+        return inv.get_contents()
+    else
+        error("Unexpected type of inventory")
+    end
+end
+
+function inv_add(inv, itemname, count)
+    if pcall(function() return inv.owner.type == "storage-tank" end) then
+        game.print("Wot1")
+    elseif pcall(function() return inv.entity_owner.type == "container" end) then
+        return inv.insert({name=itemname, count=count})
+    else
+        error("Unexpected type of inventory")
+    end
+end
+
+function inv_subtract(inv, itemname, count)
+    if pcall(function() return inv.owner.type == "storage-tank" end) then
+        game.print("Wot1")
+    elseif pcall(function() return inv.entity_owner.type == "container" end) then
+        return inv.remove({name=itemname, count=count})
+    else
+        error("Unexpected type of inventory")
+    end
+end
+
 function transfer_inventories_balanced(invs, itemname, amount, extract)
     -- First pass, find out how much is already stored
     local found = {}
     local found_total = 0
     for i, inv in pairs(invs) do
-        local x = inv.get_item_count(itemname)
+        local x = inv_count(inv, itemname)
         found[i] = x
         found_total = found_total + x
     end
@@ -216,9 +261,9 @@ function transfer_inventories_balanced(invs, itemname, amount, extract)
         end
         if count > 0 then
             if extract then
-                transferred = transferred + inv.remove({name=itemname, count=count})
+                transferred = transferred + inv_subtract(inv, itemname, count)
             else
-                transferred = transferred + inv.insert({name=itemname, count=count})
+                transferred = transferred + inv_add(inv, itemname, count)
             end
         end
     end
@@ -230,9 +275,9 @@ function transfer_inventories_balanced(invs, itemname, amount, extract)
                 break
             end
             if extract then
-                transferred = transferred + inv.remove({name=itemname, count=(amount-transferred)})
+                transferred = transferred + inv_subtract(inv, itemname, amount-transferred)
             else
-                transferred = transferred + inv.insert({name=itemname, count=(amount-transferred)})
+                transferred = transferred + inv_add(inv, itemname, amount-transferred)
             end
         end
     end
@@ -262,7 +307,11 @@ function get_chest_inventories(stopnum)
     local chests = global.stops[stopnum].chests
     for i, chest in pairs(chests) do
         if chest.valid then
-            table.insert(invs, chest.get_inventory(defines.inventory.chest))
+            local inv = chest.get_inventory(defines.inventory.chest)
+            if inv == nil then
+                inv = chest.fluidbox
+            end
+            table.insert(invs, inv)
         end
     end
     return invs
@@ -291,7 +340,7 @@ function merge_inventories(invs)
     local contents = {}
 
     for i, inv in pairs(invs) do
-        for itemname, count in pairs(inv.get_contents()) do
+        for itemname, count in pairs(inv_contents(inv)) do
             contents[itemname] = (contents[itemname] or 0) + count
         end
     end
@@ -394,7 +443,8 @@ end
 
 valid_container_types = {
     trainworks_chest_horizontal = true,
-    trainworks_chest_vertical = true
+    trainworks_chest_vertical = true,
+    trainworks_tank = true,
 }
 
 valid_stop_types = {
@@ -426,10 +476,10 @@ stop_offset_opposite[defines.direction.west] = {x=-3, y=-4}
 
 function update_stop_chests(stop)
     -- Chests on the same side as the stop
-    local chestlist = find_entity_chain(stop.surface, stop.position, stop_offset_same[flip_direction[stop.direction]], flip_direction[stop.direction], MAX_STATION_LENGTH, "container", valid_container_types)
+    local chestlist = find_entity_chain(stop.surface, stop.position, stop_offset_same[flip_direction[stop.direction]], flip_direction[stop.direction], MAX_STATION_LENGTH, nil, valid_container_types)
 
     -- Chests on the opposite side from the stop
-    local chestlist2 = find_entity_chain(stop.surface, stop.position, stop_offset_opposite[flip_direction[stop.direction]], flip_direction[stop.direction], MAX_STATION_LENGTH, "container", valid_container_types)
+    local chestlist2 = find_entity_chain(stop.surface, stop.position, stop_offset_opposite[flip_direction[stop.direction]], flip_direction[stop.direction], MAX_STATION_LENGTH, nil, valid_container_types)
 
     --game.print("update_stop_chests " .. fstr(stop) .. " -> " .. fstr(chestlist) .. "/" .. fstr(chestlist2))
 
@@ -498,14 +548,14 @@ function register_chest(chest)
     local stops = nil
 
     -- XXX FIXME generalize this for future expansion, such as bot logistic chests
-    if chest.name == "trainworks_chest_horizontal" then
+    if chest.name == "trainworks_chest_horizontal" or (chest.name == "trainworks_tank" and chest.orientation == defines.direction.north) then
         stops = {
             search_for_stop_same(chest.surface, chest.position, defines.direction.east),
             search_for_stop_same(chest.surface, chest.position, defines.direction.west),
             search_for_stop_opposite(chest.surface, chest.position, defines.direction.east),
             search_for_stop_opposite(chest.surface, chest.position, defines.direction.west)
         }
-    elseif chest.name == "trainworks_chest_vertical" then
+    elseif chest.name == "trainworks_chest_vertical" or (chest.name == "trainworks_tank" and chest.orientation == defines.direction.east) then
         stops = {
             search_for_stop_same(chest.surface, chest.position, defines.direction.north),
             search_for_stop_same(chest.surface, chest.position, defines.direction.south),
