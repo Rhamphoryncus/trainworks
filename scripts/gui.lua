@@ -208,7 +208,10 @@ function populate_train_list(playernum)
 
     -- Then readd the list of trains
     for trainid, trainobj in pairs(global.trains) do
-        local routename = global.routes[trainobj.routenum].name
+        local routename = ""
+        if trainobj.routenum ~= nil then
+            routename = global.routes[trainobj.routenum].name
+        end
         local train = trainobj.train
         local issue = false
         local visible = false
@@ -247,7 +250,10 @@ function update_train_list_train(playernum, trainid)
     local label = traintable[("trainworks_trainlabel_"..trainid)]
 
     if label ~= nil then
-        local routename = global.routes[trainobj.routenum].name
+        local routename = ""
+        if trainobj.routenum ~= nil then
+            routename = global.routes[trainobj.routenum].name
+        end
         local train = trainobj.train
         local status = ""
         local issue = false
@@ -308,7 +314,11 @@ end
 function generate_cargo_string(contents)
     local stuff = {}
     for itemname, count in pairs(contents) do
-        table.insert(stuff, string.format("[item=%s]=%i", itemname, count))
+        if game.item_prototypes[itemname] then
+            table.insert(stuff, string.format("[item=%s]=%i", itemname, count))
+        elseif game.fluid_prototypes[itemname] then
+            table.insert(stuff, string.format("[fluid=%s]=%i", itemname, count))
+        end
     end
 
     return table.concat(stuff, ", ")

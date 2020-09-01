@@ -8,13 +8,9 @@
 -- Better balancing for wildly unbalanced chests
 -- Generate backer_name for new routes in a way that doesn't create a temporary object (and smoke) at 0,0
 -- update_train_list_train's updating of train status/issue should be done in a separate pass, independent of the player
--- Stops need a virtual signal as a weight modifier.  Common practice should be giving service routes a bonus, to counter universal's penalty.
--- Fluid wagon support
 -- Bug: clearing last_activity requires reqprov be updated to the current job but that happens lazily.  It's possible on a large map for a job to happen quick enough that reqprov never saw it and thus last_activity is never cleared.
 -- Bug: trainlist radiobuttons aren't being cleared immediately when you selected a different train
--- Expand find_idling_train to have a flag for fluid trains
--- Figure out how to make transfer_inventories_balanced work with fluid trains.  Make adding/removing/counting go through generic functions?
--- Make get_chest_inventories and get_train_inventories also mix in the fluid boxes
+-- Bug: Picking up a trainworks_tank gives back a vanilla tank rather than a trainworks_tank
 
 
 -- Attempt to load the profiler, ignore any errors if it doesn't exist

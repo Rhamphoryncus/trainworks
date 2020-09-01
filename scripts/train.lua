@@ -206,7 +206,11 @@ function inv_count(inv, itemname)
             return 0
         end
     elseif pcall(function() return inv.entity_owner.type == "container" end) then
-        return inv.get_item_count(itemname)
+        if game.item_prototypes[itemname] ~= nil then
+            return inv.get_item_count(itemname)
+        else
+            return 0
+        end
     else
         error("Unexpected type of inventory")
     end
@@ -260,7 +264,11 @@ function inv_add(inv, itemname, count)
         inv[1] = subbox
         return count
     elseif pcall(function() return inv.entity_owner.type == "container" end) then
-        return inv.insert({name=itemname, count=count})
+        if game.item_prototypes[itemname] ~= nil then
+            return inv.insert({name=itemname, count=count})
+        else
+            return 0
+        end
     else
         error("Unexpected type of inventory")
     end
