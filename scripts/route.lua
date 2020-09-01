@@ -331,7 +331,7 @@ function tasks.service_route_requests(task)
     for itemname, stops in pairs(global.routes[routenum].requested) do
         for stopnum, reqwanted in pairs(stops) do
             local reqweight = global.stops[stopnum].weight or 0
-            local train = find_idling_train(routenum)
+            local train = find_idling_train(routenum, itemname)
             local pstops = global.routes[routenum].provided[itemname]
             if train ~= nil and pstops ~= nil and next(pstops) ~= nil then
                 local maximum_amount = space_for_type(get_train_inventories(train), itemname)

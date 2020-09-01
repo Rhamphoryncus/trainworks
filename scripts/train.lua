@@ -57,6 +57,12 @@ function train_status_garbage(trainid, train)
         end
     end
 
+    for x, wagon in pairs(train.fluid_wagons) do
+        if wagon.fluidbox[1] ~= nil then
+            return true, {"gui.train_status_garbage"}
+        end
+    end
+
     return false, ""
 end
 
@@ -72,7 +78,7 @@ function train_status_error(trainid, train)
     end
 end
 
-function train_is_idling(trainid, train)
+function train_is_idling(trainid, train, itemname)
     if not train.valid then
         global.cleanup_trains[trainid] = train
         return false
@@ -82,6 +88,13 @@ function train_is_idling(trainid, train)
             or train.station == nil
             or train.station.prototype.name ~= "trainworks_depot"
             then
+        return false
+    end
+
+    -- Make sure the train has the right wagons for this cargo
+    if game.fluid_prototypes[itemname] ~= nil and next(train.fluid_wagons) == nil then
+        return false
+    elseif game.item_prototypes[itemname] ~= nil and next(train.cargo_wagons) == nil then
         return false
     end
 
@@ -101,9 +114,9 @@ function train_is_idling(trainid, train)
 end
 
 
-function find_idling_train(routenum)
+function find_idling_train(routenum, itemname)
     for trainid, train in pairs(global.routes[routenum].trains) do
-        if train_is_idling(trainid, train) then
+        if train_is_idling(trainid, train, itemname) then
             return train
         end
     end
