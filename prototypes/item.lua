@@ -111,6 +111,7 @@ tank.fluid_box = {
         {position = {-3.5, -0.5}},
     }
 }
+tank.minable.result = "trainworks_tank"
 
 local tank_item = table.deepcopy(data.raw.item["storage-tank"])
 tank_item.name = "trainworks_tank"
