@@ -109,7 +109,8 @@ tank.fluid_box = {
         {position = {3.5, -0.5}},
         {position = {-3.5, 0.5}},
         {position = {-3.5, -0.5}},
-    }
+    },
+    pipe_covers = pipecoverspictures()
 }
 tank.minable.result = "trainworks_tank"
 

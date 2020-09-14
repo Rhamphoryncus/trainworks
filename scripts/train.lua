@@ -627,14 +627,14 @@ function register_chest(chest)
     local stops = nil
 
     -- XXX FIXME generalize this for future expansion, such as bot logistic chests
-    if chest.name == "trainworks_chest_horizontal" or (chest.name == "trainworks_tank" and chest.orientation == defines.direction.north) then
+    if chest.name == "trainworks_chest_horizontal" or (chest.name == "trainworks_tank" and chest.direction == defines.direction.north) then
         stops = {
             search_for_stop_same(chest.surface, chest.position, defines.direction.east),
             search_for_stop_same(chest.surface, chest.position, defines.direction.west),
             search_for_stop_opposite(chest.surface, chest.position, defines.direction.east),
             search_for_stop_opposite(chest.surface, chest.position, defines.direction.west)
         }
-    elseif chest.name == "trainworks_chest_vertical" or (chest.name == "trainworks_tank" and chest.orientation == defines.direction.east) then
+    elseif chest.name == "trainworks_chest_vertical" or (chest.name == "trainworks_tank" and chest.direction == defines.direction.east) then
         stops = {
             search_for_stop_same(chest.surface, chest.position, defines.direction.north),
             search_for_stop_same(chest.surface, chest.position, defines.direction.south),

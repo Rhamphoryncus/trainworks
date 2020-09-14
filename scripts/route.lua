@@ -28,7 +28,6 @@ end
 
 function calculate_value_for_stop(stopnum)
     local value = {}
-    local chests = global.stops[stopnum].chests
 
     -- Add signals to value
     local stopsignals = merge_stop_signals(stopnum)
